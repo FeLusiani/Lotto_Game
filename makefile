@@ -10,9 +10,9 @@ SRCDIR     = src
 BINDIR     = bin
 
 # Object files
-SHARED_OBJFILES = utils.o
+SHARED_OBJFILES = utils.o llist.o
 CLIENT_OBJFILES = client_main.o message.o $(SHARED_OBJFILES)
-SERVER_OBJFILES = server_main.o play_handle.o user_handle.o $(SHARED_OBJFILES)
+SERVER_OBJFILES = server_main.o $(SHARED_OBJFILES)
 
 # Binary files
 CLIENT = lotto_client

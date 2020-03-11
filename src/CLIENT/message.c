@@ -51,7 +51,7 @@ void show_error(enum ERROR e){
 }
 
 //HELP, SIGNUP, LOGIN, INVIA_GIOCATA, VEDI_GIOCATA, VEDI_ESTRAZIONE, VEDI_VINCITE, ESCI, NO_COMMAND
-void show_basic_help(enum COMMAND c){
+void show_help(enum COMMAND c){
 	char *str, *help, *signup, *login, *invia_giocata, *vedi_giocata, *vedi_estrazione, *vedi_vincite, *esci, *basic;
     basic =           "*************************** BENVENUTO AL GIOCO DEL LOTTO ***************************\n"
                       "Sono disponibili i seguenti comandi:\n\n"

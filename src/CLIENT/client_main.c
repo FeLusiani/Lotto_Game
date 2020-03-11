@@ -9,565 +9,381 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+
+#include "../SHARED/utils.h"
 #include "message.h"
 
 #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
 
 int not_reachable = 0;
-/*
-	qui sono inserite le funzioni di parsing dei comandi nel formato
-	- ERROR nomecomando(char *str, int8_t *buffer, protocol_header_client *header);
-	- char* str : equivale alla stringa scritta in input senza la sottostringa del comando (EX: input = "!login\0gino\0pino" str = "gino\0pino)
-	- uint8_t* buffer: buffer che verra inviato al server
-	- protocol_header_client *header : header del protocollo in cui la funzione dovrà settare il parametro data_size che definisce la grandezza del buffer
-	- ritorna un SYNTAX_ERROR se il comando non è ben formattato, NO_SEND se non è necessario un invio al server per eseguire la funzione, NO_ERROR altrimenti
-*/
-enum ERROR help(char *_params, uint8_t *req_, struct protocol_header_client *header_){
-	if(_params[0] == '\0'){
-		show_basic_help(NO_COMMAND);
-	}
-	else{
-		enum COMMAND c = str2command(_params);
-		if(c == NO_COMMAND)
-			printf("mi dispiace non esiste alcun comando con questo nome\n utilizza !help per vedere la lista di comandi\n");
-		else
-			show_basic_help(c);
-	}
-	return NO_SEND;
+void disconnection_handler(int signal){
+	not_reachable = 1;
 }
 
-/*
-	login invia nel buffer una stringa [username]\0[password]\0
-*/
-enum ERROR login(char *_params, uint8_t *req_, struct protocol_header_client *header_){
-	int u_s, p_s;
+// le seguenti funzioni sono utilizzate per eseguire i comandi del client
+// ogni funzione si occupa di scrivere il messaggio da scrivere al server (header e buffer)
+// Se non ci sono errori, restituisce NO_ERROR
+enum ERROR help(char *_params, uint8_t *msg_buf, struct client_msg_header *header_){
+	header_->buff_size = 0;
+	if(_params[0] == '\0'){
+		show_help(NO_COMMAND);
+		return NO_ERROR;
+	}
+	enum COMMAND c = str2command(_params);
+	if(c == NO_COMMAND)
+		printf("Non esiste alcun comando con questo nome\nUsa !help per vedere la lista dei comandi\n");
+	else
+		show_help(c);
+
+	return NO_ERROR;
+}
+
+enum ERROR signup(char* _params, uint8_t* msg_buf_, struct client_msg_header* header_){
+	header_->buff_size = 0;
+	int u_length, p_length;
 	char *user, *pwd;
 
-	user = _params;                       // variabile che contiene il nome utente, primo parametro
-	pwd = &_params[strlen(_params) + 1]; // variabile che contiene la password, secondo parametro
+	// leggo i parametri
+	user = _params;
+	pwd = &_params[strlen(_params) + 1];
 
 	if(*user == '\0' || *pwd == '\0'){
 		return SYNTAX_ERROR;
 	}
-	u_s = strlen(user) + 1;
-	p_s = strlen(pwd) + 1;
+	u_length = strlen(user) + 1;
+	p_length = strlen(pwd) + 1;
 
-	/* copio il nome utente e la password nel buffer e la grandezza del buffer nel header */
-	header_->data_size = u_s + p_s;
-	memcpy(&(req_[0]), user, u_s * sizeof(char));
-	memcpy(&(req_[u_s]), pwd, p_s * sizeof(char));
+	// credentials size tra 4 e 50 char
+	if(p_length < 5 || u_length < 5 || p_length > 51 || u_length > 51)
+		return WRONG_CREDENTIALS_SIZE;
+
+	// copio il nome utente e la password nel buffer e la grandezza del buffer nel header
+	memcpy(&(msg_buf_[0]), user, u_length);
+	memcpy(&(msg_buf_[u_length]), pwd, p_length);
+	header_->buff_size = u_length + p_length;
 
 	return NO_ERROR;
 }
-/*
-	signup invia nel buffer una stringa [username]\0[password]\0
-*/
-enum ERROR signup(char *_params, uint8_t *req_, struct protocol_header_client *header_){
-	int u_s, p_s;
-	char *usr, *psw;
 
-	if(_params[0] == '\0' || _params[strlen(_params) + 1] == '\0'){
+enum ERROR login(char* _params, uint8_t* msg_buf_, struct client_msg_header* header_){
+	header_->buff_size = 0;
+	int u_length, p_length;
+	char *user, *pwd;
+
+	// leggo i parametri
+	user = _params;
+	pwd = &_params[strlen(_params) + 1];
+
+	if(*user == '\0' || *pwd == '\0'){
 		return SYNTAX_ERROR;
 	}
-	usr = _params;                       // variabile che contiene il nome utente, primo parametro
-	psw = &_params[strlen(_params) + 1]; // variabile che contiene la password, secondo parametro
-	u_s = strlen(usr) + 1;
-	p_s = strlen(psw) + 1;
+	u_length = strlen(user) + 1;
+	p_length = strlen(pwd) + 1;
 
-	if(p_s < 4 || u_s < 4 || p_s > 50 || u_s > 50)
-		return CREDENTIAL_WRONG_SIZE;
-
-	/* copio il nome utente e la password nel buffer e la grandezza del buffer nel header */
-	header_->data_size = u_s + p_s;
-	memcpy(&(req_[0]), usr, u_s * sizeof(char));
-	memcpy(&(req_[u_s]), psw, p_s * sizeof(char));
+	// copio il nome utente e la password nel buffer e la grandezza del buffer nel header
+	memcpy(&(msg_buf_[0]), user, u_length);
+	memcpy(&(msg_buf_[u_length]), pwd, p_length);
+	header_->buff_size = u_length + p_length;
 
 	return NO_ERROR;
 }
-/*
-	invia_giocata invia nel buffer una stringa |  ruote_giocate (2 byte) indirizzamento diretto  | numeri giocati (1 - 5 byte) | 255 (1 byte) | scommesse fatte((1 - 5) * sizeof(double)) |
-*/
-enum ERROR invia_giocata(char *_params, uint8_t *req_, struct protocol_header_client *header_){
+
+enum ERROR invia_giocata(char *_params, uint8_t *msg_buf_, struct client_msg_header *header_){
+	header_->buff_size = 0;
 	enum RUOTA r;
-	int res, temp, num_counter = 0;
-	double temp_double;
-	uint16_t ruote = 0;
+	// ruote_giocate e' una stringa che rappresenta le ruote giocate
+	// Essendo enum, RUOTA e' un intero che va da 0 a N_RUOTE
+	// ruote_giocate[R] == 'X' se la ruota R viene giocata, altrimenti '-'
+	// ruote_giocate ha lunghezza N_RUOTE+1 (per il '\0')
+	char ruote_giocate[N_RUOTE+1] = "-----------";
 
 	if(strcmp(_params, "-r") != 0)
 		return SYNTAX_ERROR;
 
-
-	_params = &_params[strlen(_params) + 1]; // salto la sotto stringa già controllata "-r"
-	/*
-		estraggo le ruote dal loro nome dalla funzione str2ruota(char *str):
-
-		se la sotto stringa corrente è "-n" ho finito di controllare le ruote
-		se è "\0" ho finito le sottostringhe quindi lancio una SYNTAX_ERROR (non ci sono scommesse)
-	*/
-	while(strcmp(_params, "-n") && _params[0] != '\0'){
-		r = str2ruota(_params);
-		if(r == NO_RUOTA){// se la ruota scritta non esiste esco
+	// scorro _params, leggendo le varie ruote.
+	// mi fermo quando arrivo a "-n" o alla fine della stringa
+	_params = &_params[strlen(_params) + 1]; //salto la stringa "-r"
+	for(; strcmp(_params, "-n") != 0; _params = &_params[strlen(_params) + 1]){
+		// se e' finita la stringa, errore
+		if(_params[0] == '\0')
 			return SYNTAX_ERROR;
-		}
 
-		/*
-			i bit del valore ruote indicano dove è stata inviata una scommessa
-			- k-bit : 0 ruota r non giocata
-			- k-bit : 1 ruota r giocata
-			(gli enum sono interi)
-		*/
+		r = str2ruota(_params);
+		if(r == NO_RUOTA)
+			return SYNTAX_ERROR;
+
 		if(r == TUTTE){
-			ruote |= ((1 << N_RUOTE) - 1);
+			strcpy(ruote_giocate, "XXXXXXXXXXX");
 		}else{
-			ruote |= (1 << r);
+			ruote_giocate[r] = 'X'; // in quanto enum, RUOTA e' un intero che va da 0 a N_RUOTE
 		}
-
-		_params = &_params[strlen(_params) + 1]; // passo alla sotto-stringa successiva
 	}
-	if(_params[0] == '\0')
-		return SYNTAX_ERROR;
 
-	/* essendo le route maggiori di 8 il valore ruote deve essere salvato in 2 byte */
-	req_[header_->data_size++] = (ruote);
-	req_[header_->data_size++] = (ruote >> 8);
+	memcpy(&(msg_buf_[0]), ruote_giocate, (N_RUOTE+1) * sizeof(char));
+	header_->buff_size += N_RUOTE+1;
 
 	_params = &_params[strlen(_params) + 1]; // salto la sotto stringa già controllata "-n"
-	/*
-		leggo i numeri (al massimo 5 al minimo 1) sui quali scommettere
-		i numeri devono essere compresi tra 0 e 90
-		i controlli di loop sono uguali ai precedenti ma con sottostrigna "-i"
-	*/
-	while(strcmp(_params, "-i") && _params[0] != '\0'){
-		num_counter++;
-		res = get_int_from_string(_params, &temp); // parso il numero contenuto nella sottostringa
-		if(_params[temp + 1] != '\0') // controllo che la sottostringa sia effettivamente un numero intero
+
+	// scorro _params, leggendo da 1 a 10 interi
+	// mi fermo quando arrivo a "-i" o alla fine della stringa
+	int num_counter = 0; // quanti numeri ho gia letto
+	_params = &_params[strlen(_params) + 1]; //salto la stringa "-n"
+	for(; strcmp(_params, "-i") != 0; _params = &_params[strlen(_params) + 1]){
+		// se e' finita la stringa, oppure ho gia' letto 10 numeri, errore
+		if(_params[0] == '\0' || num_counter >= 10)
 			return SYNTAX_ERROR;
-		if(res > 90 || res <= 0) // controllo che il numero sia compreso tra 0 e 90
-			return SYNTAX_ERROR;
-		if(num_counter > 10) // contorllo di aver inserito meno di 10 numeri
-			return SYNTAX_ERROR;
-		/* inseriso il numero (<90 dunque con dimensione 1 byte) all interno del buffer e procedo con la sottostringa successiva*/
-		req_[header_->data_size++] = res;
-		_params = &_params[strlen(_params) + 1];
+
+		int num;
+		if (sscanf(_params, "%d", &num) == 0)
+		 	return SYNTAX_ERROR;
+
+		if(num > 90 || num <= 0)
+				return SYNTAX_ERROR;
+
+		// num < 90, puo' dunque essere inviato come un byte
+		msg_buf_[header_->buff_size] = (uint8_t) num;
+		header_->buff_size ++;
+		num_counter ++;
 	}
-	req_[header_->data_size++] = 255; // il valore 255 mi serve come controllore di terminazione di numeri
 
-	_params = &_params[strlen(_params) + 1]; // salto la sottostringa già controllata "-i"
-	/*
-		leggo il valore delle scommesse e le inserisco in una variabile double e la invio
-	*/
-	num_counter = num_counter >= 5 ? 5 : num_counter;
-	while(_params[0] != '\0'){
-		num_counter--;
-		res = get_int_from_string(_params, &temp); // estraggo il numero fino al punto decimale (vedere il funzionamento di get_int_from_string)
-		temp_double = res;
-		/*
-			se effettivamente il numero contiene una parte decimale la estraggo e calcolo la parte decimale e controllo che abbia meno di
-			due cifre (non si può scommettere meno di un centesimo)
-		*/
-		if(_params[temp + 1] == '.'){
+	// 0, essendo un numero invalido su cui scommettere, e' il terminatore di sequenza di numeri
+	msg_buf_[header_->buff_size] = (uint8_t) 0;
+	header_->buff_size ++;
 
-			_params = &_params[temp + 2];
-			res = get_int_from_string(_params, &temp); // leggo la parte decimale
-			if(_params[temp + 1] != '\0') // controllo che sia un numero intero
+	// scorro _params, leggendo gli importi (max tanti quanti i numeri e max 5)
+	// mi fermo quando arrivo alla fine della stringa
+	int importi_counter = 0; // quanti importi ho gia letto
+	_params = &_params[strlen(_params) + 1]; // salto la sottostringa "-i"
+	for(; _params[0] != '\0'; _params = &_params[strlen(_params) + 1]){
+		int importo_intero = -1;
+		int importo_decimale = -1;
+		int numeri_letti = sscanf(_params, "%d.%d", &importo_intero, &importo_decimale);
+
+		if (numeri_letti==0 || importo_intero<0)
 				return SYNTAX_ERROR;
-			if(res >= 100) // controllo che sia minore di 100 dunque arrivi fino ai decimali
-				return SYNTAX_ERROR;
-			temp_double += (res < 10) ? ((double)res / 10) : ((double)res / 100);
-		}else if(_params[temp + 1] != '\0'){
-			return SYNTAX_ERROR;
+
+		// l'importo viene salvato come numero di centesimi (dunque intero)
+		int importo;
+		if (numeri_letti == 1) importo = importo_intero;
+		if (numeri_letti == 2){
+			// importo_decimale deve essere tra 0 e 99
+			if (importo_decimale < 0 || importo_decimale > 99) return SYNTAX_ERROR;
+			importo = importo_intero*100 + importo_decimale;
 		}
-		/*
-			inserisco il valore nel buffer aggiorno la quantita di elementi contenuti nel buffer e passo alla sottostringa successiva
-		*/
-		memcpy(&req_[header_->data_size], &temp_double, sizeof(double));
-		header_->data_size += sizeof(double);
-		_params = &_params[strlen(_params) + 1];
+
+		memcpy(&msg_buf_[header_->buff_size], &importo, sizeof(int));
+		header_->buff_size += sizeof(int);
+		importi_counter ++;
 	}
-	if(num_counter != 0) // il numero di scommesse deve essere compreso tra 1 e 5
+
+	// limite sul numero di importi che ha senso siano presenti
+	if (importi_counter >= num_counter || importi_counter >= 5)
 		return SYNTAX_ERROR;
 
 	return NO_ERROR;
 }
 
-/*
-	vedi_giocata invia nel buffer 1 byte contenetnte 0 oppure 1
-*/
-enum ERROR vedi_giocata(char *_params, uint8_t *req_, struct protocol_header_client *header_){
-	req_[header_->data_size++] = (_params[0] == '0') ? 0 : 1;
+enum ERROR vedi_giocata(char *_params, uint8_t *msg_buf_, struct client_msg_header *header_){
+	header_->buff_size = 0;
+	msg_buf_[header_->buff_size++] = (uint8_t) _params[0];
 	return NO_ERROR;
 }
 
-/*
-	vedi_estrazione invia nel buffer 1 byte contenente il numero di estrazioni precedenti quindi massimo 255 e 1 byte conitente la ruota
-*/
-enum ERROR vedi_estrazione(char *_params, uint8_t *req_, struct protocol_header_client *header_){
-	int temp;
+// msg_buf: numero di estrazioni da vedere (1 byte, max 255), e la ruota (1 byte)
+enum ERROR vedi_estrazione(char *_params, uint8_t *msg_buf_, struct client_msg_header *header_){
+	header_->buff_size = 0;
+	int n_estrazioni;
+	if (sscanf(_params, "%d", &n_estrazioni) == 0)
+		return SYNTAX_ERROR;
+	if (n_estrazioni < 0 || n_estrazioni > 255)
+		return SYNTAX_ERROR;
 
-	req_[header_->data_size++] = get_int_from_string(_params, &temp);
-	if(_params[strlen(_params) + 1] != '\0'){
-		req_[header_->data_size++] = str2ruota(&_params[strlen(_params) + 1]);
+	_params = &_params[strlen(_params) + 1]; // vado avanti a leggere _params
+	enum RUOTA r;
+	if(_params[0] == '\0') // si ricorda che _params finisce con doppio \0
+		r = TUTTE;
+	else{
+		r = str2ruota(_params);
+		if (r == NO_RUOTA) return SYNTAX_ERROR;
 	}
-
+	msg_buf_[header_->buff_size++] = (uint8_t) r;
 	return NO_ERROR;
 }
-enum ERROR vedi_vincite(char *_params, uint8_t *req_, struct protocol_header_client *header_){
-	return NO_ERROR;
-}
-enum ERROR esci(char *_params, uint8_t *req_, struct protocol_header_client *header_){
-	return NO_ERROR;
-}
-
-/*
-	qui sono inserite le funzioni che mostrano a video eventuali dati
-	inviato dal server nel formato:
-	void [nomecomando]_ret(uint8_t* buf, protocol_header_server _header)
-*/
-void vedi_estrazione_ret(uint8_t *buf, struct protocol_header_server _header){
-	int i, counter = 0, j = 0;
-	long n_extraction;
-	memcpy(&n_extraction, buf, sizeof(long));
-	counter += sizeof(long);
-	while(counter < _header.data_size){
-		printf("\nESTRAZIONE: %ld\n", n_extraction - 1 - j);
-		j++;
-		while(buf[counter] != 255 && counter < _header.data_size){
-			printf("%s : ", ruota2str(buf[counter++]));
-			for(i = 0; i < 5; i++)
-				printf("%d, ", buf[counter++]);
-			printf("\n");
-		}
-		counter++;
-	}
-	printf("\n");
-}
-
-void vedi_giocata_ret(uint8_t *_buf, struct protocol_header_server _header){
-	int i = 0, counter = 0, n_giocata = 1;
-	uint16_t ruote;
-	double temp_double;
-	int N;
-	char *gamble_type[5] = {"estratto", "ambo", "terno", "quartetto", "cinquina"};
-
-	/*
-		per ogni
-	*/
-	while(counter < _header.data_size){
-		ruote = _buf[counter] + (_buf[counter + 1] << 8); // estraggo le ruote su cui è giocato (2 bytes)
-		counter += 2;
-		printf("%d) ruote: ", n_giocata);
-		for(i = 0; i < N_RUOTE; i++){
-			if((ruote & (1 << i)) != 0){
-				printf("%s ", ruota2str(i));
-			}
-		}
-
-		/*
-			estraggo tutti i numeri giocati
-		*/
-		printf(" numeri giocati: ");
-		for(i = 0; i < 10 && _buf[counter + i] != 255; i++){
-			printf("%d, ", _buf[counter + i]);
-		}
-		counter += i + 1;
-		N = i >= 5 ? 5 : i;
-
-		/*
-			estraggo le scommesse fatte (ricordo che sono double)
-		*/
-		for(i = 0; i < N; i++){
-			memcpy(&temp_double, &_buf[counter], sizeof(double));
-			counter += sizeof(double);
-			printf("%s: ", gamble_type[i]);
-			show_double(temp_double);
-			printf(", ");
-		}
-		n_giocata++;
-		printf("\n");
-	}
-}
-
-void vedi_vincite_ret(uint8_t *_buf, struct protocol_header_server _header){
-	int i = 0, j= 0, counter = 0, numbers[10], n_giocate, n_ruote, n_volta = 2;
-	long t, preT = -1;
-	uint16_t ruote;
-	double values[5], tot_values[5] = {0,0,0,0,0}, temp_double;
-	int N;
-	double vincite[] = {11.23, 250, 4500, 120000, 6000000};
-	char *gamble_type[5] = {"estratto", "ambo", "terno", "quartetto", "cinquina"};
-
-	while(counter < _header.data_size){
-
-		memcpy(&t, &_buf[counter], sizeof(long)); // estraggo il numero di estrazione
-		counter += sizeof(long);
-
-		/* se il numero di estraizone è diverso lo mostro */
-		if(t != preT){
-			printf("\n***************** estrazione (%ld) *****************\ngiocata 1:\n", t);
-			n_giocate = 1;
-			preT = t;
-		}else{
-			printf("giocata %d:\n", n_volta++);
-			n_giocate = 1;
-		}
 
 
-		ruote = _buf[counter] + (_buf[counter + 1] << 8); // estraggo le ruote su cui è giocato
-		counter += 2;
-		/*  estraggo i numeri giocati e le quantita' di numeri giocati */
-		memset(numbers ,0, 10 * sizeof(numbers[0]));
-		for(i = 0; i < 10 && _buf[counter + i] != 255; i++){
-			numbers[i] = _buf[counter + i];
-		}
-		counter += i + 1;
-		N = i;
-
-		/* estraggo tutte le scommesse sapendo la quantità di scommesse fate */
-		memcpy(&values[0], &_buf[counter], min(N, 5) * sizeof(double));
-		counter += min(N, 5) * sizeof(double);
-
-		/*  calcolo la quantia totale di ruote giocate (hamming distance con il valore 0) */
-		n_ruote = 0;
-		for(i = 0; i < N_RUOTE; i++){
-			n_ruote += ((ruote & (1 << i)) != 0);
-		}
-
-		/* per ogni ruota calcolo la scommessa */
-		for(i = 0; i < N_RUOTE; i++){
-			if((ruote & (1 << i)) != 0){ // osservo se la ruota è stata giocata
-				printf("\t%d) ruota: ", n_giocate);
-				printf("%s   ", ruota2str(i));
-				for(j = 0; j < N; j++)
-					printf("%d ", numbers[j]);
-				printf(" >> ");
-
-				/* _buf[counter] contiene la quantità di numeri indovinati... ricordo che il gioco è simmetrico non serve sapere quali numeri sono stati indovinati */
-				for(j = 0; j < min(N, 5); j++){
-					/*  osservo se sul seguente tipo di valore */
-					if(values[j] != 0){
-						temp_double = (j < _buf[counter]) ? values[j] : 0;
-						if((int)temp_double != 0){
-							temp_double /= n_ruote; // divido per le ruote su cui ho giocato
-							temp_double *= vincite[j]; // moltiplico per il guadagno per tipo di giocata (AMBO, ESTRATTO, etc etc..)
-							/* moltiplico per tutte le disposizioni fatte e divido per tutte quelle possibili */
-							temp_double *= (double)disposizioni(_buf[counter], j + 1) / (double)disposizioni(N, j + 1);
-							tot_values[j] += temp_double; // aggiungo la vincita a tutte le vincite
-						}
-						printf("%s ", gamble_type[j]);
-						show_double(temp_double);
-						printf("  ");
-					}
-				}
-				counter++;
-				printf("\n");
-				n_giocate++;
-			}
-		}
-	}
-
-	printf("*********************************************\n\n");
-	for(i = 0; i < 5; i++){
-		printf("%s: ", gamble_type[i]);
-		show_double(tot_values[i]);
-		printf("\n");
-	}
-	printf("\n");
-}
-
-void send_to_server(int _sid, struct protocol_header_client *_p, uint8_t *_buff, enum ERROR *e){
-	ssize_t res;
-
-	res = send(_sid, (void*) _p, sizeof(struct protocol_header_client), 0);
-	if(_p->data_size > 0 && res != -1)
-		res = send(_sid, (void*) _buff, _p->data_size, 0);
-	if(not_reachable == 1 || res == -1)
-		*e = DISCONNECTED;
-	else
-		*e = NO_ERROR;
-}
-
-void recv_from_server(int _sid, struct protocol_header_server *_p, uint8_t *_buff, enum ERROR *e){
-	ssize_t res;
-	res = recv(_sid, (void*) _p, sizeof(struct protocol_header_server), 0);
-	if(_p->data_size > 0 && res != -1)
-		res = recv(_sid, (void*) _buff, _p->data_size, 0);
-	if(not_reachable == 1 || res == -1)
-		*e = DISCONNECTED;
-	else
-		*e = NO_ERROR;
-}
-
-void disconnection_handle(int signal){
-	not_reachable = 1;
-}
 
 //	************************************************** MAIN *****************************************************************
 int main (int argc, char *argv[]) {
-	int sid, temp, porta, i, N;
-	char *ip, input[1000], *str;
-	uint8_t *buf = malloc(MAX_DATA_SIZE * sizeof(uint8_t));
+	int sid, port, i;
+	char *ip_address, *str;
 	struct sockaddr_in sv_addr;
 
-	signal(SIGPIPE, disconnection_handle);
+	signal(SIGPIPE, disconnection_handler);
 
-	struct protocol_header_client header_send; // variabile che contiene l'header che il client invia al server
-	struct protocol_header_server header_recived; // variabile che contiene l'header che il server ha inviato al client
+	struct client_msg_header header_to_server; // variabile che contiene l'header che il client invia al server
+	struct server_msg_header header_from_server; // variabile che contiene l'header che il client riceve dal server
+	uint8_t *buf = malloc(MAX_DATA_SIZE * sizeof(uint8_t)); //buffer su cui scrivere/leggere data per/da il server
 
 	enum ERROR err;
 
-	strcpy(header_send.session_id, "0000000000"); // il session id prima che venga configurato da login o signup è 0000000000
-
-	if(argc == 3){
-		/*	estraggo i parametri di inizio */
-		ip = argv[1];
-		porta = get_int_from_string(argv[2], &temp);
-
-		/* Creazione socket */
-		sid = socket(AF_INET, SOCK_STREAM, 0);
-
-		/* Creazione indirizzo del server */
-		memset(&sv_addr, 0, sizeof(sv_addr));
-		sv_addr.sin_family = AF_INET ;
-		sv_addr.sin_port = htons(porta);
-		inet_pton(AF_INET, ip, &sv_addr.sin_addr);
-
-		i = 0;
-		while(i < 10 && connect(sid, (struct sockaddr*)&sv_addr, sizeof(sv_addr)) != 0){
-			sleep(1);
-			i++;
-		}
-
-		if(i == 10){
-			printf("impossibile connettersi al server: %s\n", strerror(errno));
-			return 0;
-		}
-
-
-		show_basic_help(NO_COMMAND);
-
-		header_send.command_type = NO_COMMAND;
-		while(header_send.command_type != ESCI && err != BANNED && not_reachable == 0){
-
-			printf("$");
-			i = 0;
-			/* estraggo la line di comando */
-			do{
-				scanf("%c", &input[i]);
-				if(i >= 1000)
-					break;
-			}while(input[i++] != '\n');
-			input[i - 1] = '\0';
-			N = i - 1;
-			err = NO_ERROR;
-			/* inizio il parser eliminando gli spazi sostituendoli con \0 garantisce di avere piu strighe consecutive nello stesso array con terminazione \0\0 */
-			for(i = 0; i < N; i++){
-				if(input[i] == ' ' && input[i + 1] == ' '){
-					printf("troppi spazi\n");
-					err = GENERIC_ERROR;
-					break;
-				}
-				input[i] = (input[i] == ' ') ? '\0' : input[i];
-			}
-			input[N + 1] = '\0';
-			str = input;
-
-			if(err == NO_ERROR){
-				/* estraggo il comando come prima sottostringa */
-				header_send.command_type = str2command(str);
-				str = &str[strlen(str) + 1];
-
-				if(header_send.command_type == NO_COMMAND){ // comando non riconosciuto
-					printf("comando non riconosciuto\n");
-				}else{
-					err = NO_SEND;
-
-					header_send.data_size = 0;
-					/*
-						per ogni istruzione definisco un parser per tale istruzione nella forma
-							- ERROR nomecomando(char *str, int8_t *buffer, protocol_header_client *header);
-							- char* str : equivale alla stringa scritta in input senza la sottostringa del comando (EX: input = "!login\0gino\0pino" str = "gino\0pino)
-							- uint8_t* buffer: buffer che verra inviato al server
-							- protocol_header_client *header : header del protocollo in cui la funzione dovrà settare il parametro data_size che definisce la grandezza del buffer
-							- ritorna un SYNTAX_ERROR se il comando non è ben formattato, NO_SEND se non è necessario un invio al server per eseguire la funzione, NO_ERROR altrimenti
-					*/
-					switch(header_send.command_type){
-						case HELP:
-							err = help(str, buf, &header_send);
-							break;
-						case LOGIN:
-							err = login(str, buf, &header_send);
-							break;
-						case SIGNUP:
-							err = signup(str, buf, &header_send);
-							break;
-						case INVIA_GIOCATA:
-							err = invia_giocata(str, buf, &header_send);
-							break;
-						case VEDI_GIOCATA:
-							err = vedi_giocata(str, buf, &header_send);
-							break;
-						case VEDI_ESTRAZIONE:
-							err = vedi_estrazione(str, buf, &header_send);
-							break;
-						case VEDI_VINCITE:
-							err = vedi_vincite(str, buf, &header_send);
-							break;
-						case ESCI:
-							err = esci(str, buf, &header_send);
-							break;
-					}
-					if(err == NO_ERROR){
-						/* invio prima l'header e poi incapsulo il buffer se la grandezza di esso è maggiore di 0 */
-						send_to_server(sid, &header_send, buf, &err);
-
-						/* ricevo prima l'header e poi estraggo il buffer se la grandezza di esso è maggiore di 0 */
-						if(err == NO_ERROR)
-							recv_from_server(sid, &header_recived, buf, &err);
-
-						if(err != NO_ERROR)
-							header_recived.error_type = err;
-						show_error((enum ERROR)header_recived.error_type); // mostro a video eventuali errori
-						err = header_recived.error_type;
-						/*
-							se non ci sono errori, in base all comando inviato al server, mostro a video eventuali dati
-							oppure salvo il valore session_id inviato dl server dopo una login / signup
-						*/
-						if(header_recived.error_type == NO_ERROR){
-							switch(header_send.command_type){
-								case INVIA_GIOCATA:
-									printf("invio riuscito\n");
-								break;
-								case LOGIN:
-									strcpy(header_send.session_id, (char*)buf);
-									break;
-								case SIGNUP:
-									strcpy(header_send.session_id, (char*)buf);
-									printf("iscrizione avvenuta con successo\n");
-									break;
-								case VEDI_GIOCATA:
-									vedi_giocata_ret(buf, header_recived);
-									break;
-								case VEDI_ESTRAZIONE:
-									vedi_estrazione_ret(buf, header_recived);
-									break;
-								case VEDI_VINCITE:
-									vedi_vincite_ret(buf, header_recived);
-									break;
-								default:
-									break;
-							}
-						}
-					}else if(err != NO_SEND){
-						show_error(err);
-					}
-				}
-			}
-		}
-		close(sid);
+	// il session id prima che venga configurato da login o signup è 0000000000
+	strcpy(header_to_server.session_id, "0000000000");
+	if(argc != 3){
+		printf("ERRORE: specificare [IP] e [porta]");
+		return 0;
 	}
-	if(err == NO_ERROR)
-		printf("disconnessione avvenuta con successo\n");
-	free(buf);
+	//	estraggo i parametri di inizio
+	ip_address = argv[1];
+	printf("IP %s\n", ip_address);
+	port = atoi(argv[2]);
+	printf("PORT %d\n", port);
 
+	// Creazione socket
+	sid = socket(AF_INET, SOCK_STREAM, 0);
+	// Creazione indirizzo del server
+	memset(&sv_addr, 0, sizeof(sv_addr));
+	sv_addr.sin_family = AF_INET;
+	sv_addr.sin_port = htons(port);
+	inet_pton(AF_INET, ip_address, &sv_addr.sin_addr);
+
+	i = 0;
+	while(i < 10 && connect(sid, (struct sockaddr*)&sv_addr, sizeof(sv_addr)) != 0){
+		sleep(1);
+		i++;
+	}
+
+	if(i == 10){
+		printf("impossibile connettersi al server: %s\n", strerror(errno));
+		return 0;
+	}
+
+	show_help(NO_COMMAND);
+	while(header_to_server.command_type != ESCI && err != BANNED && not_reachable == 0){
+
+		printf(">");
+		i = 0;
+		/* estraggo la line di comando */
+		size_t max_input = 1000;
+		char input[1000];
+		int input_size = getline((char**)&input,&max_input,stdin);
+		input[input_size - 1] = '\0'; // sostiuisco il \n finale con \0
+		printf("%s", input);
+		err = NO_ERROR;
+		// sostituisco gli spazi bianchi con \0, dividendo input in sottostringhe
+		for(i = 0; i < input_size; i++){
+			if(input[i] != ' ')
+				continue;
+
+			input[i] = '\0';
+			if (input[i+1] == ' '){
+				printf("Bad Syntax: troppi spazi\n");
+				err = GENERIC_ERROR;
+				break;
+			}
+		}
+
+		if(err != NO_ERROR) continue; // riprova a leggere l'input
+
+		// estraggo il comando come prima sottostringa
+		header_to_server.command_type = str2command(str);
+		str = &str[strlen(str) + 1];
+
+		if(header_to_server.command_type == NO_COMMAND){
+			printf("Comando non riconosciuto\n");
+			continue; //riprova a leggere l'input
+		}
+
+		err = NO_ERROR;
+
+		header_to_server.buff_size = 0;
+		/*
+			per ogni istruzione definisco un parser per tale istruzione nella forma
+				- ERROR nomecomando(char *str, int8_t *buffer, protocol_header_client *header);
+				- char* str : equivale alla stringa scritta in input senza la sottostringa del comando (EX: input = "!login\0gino\0pino" str = "gino\0pino)
+				- uint8_t* buffer: buffer che verra inviato al server
+				- protocol_header_client *header : header del protocollo in cui la funzione dovrà settare il parametro data_size che definisce la grandezza del buffer
+				- ritorna un SYNTAX_ERROR se il comando non è ben formattato, NO_SEND se non è necessario un invio al server per eseguire la funzione, NO_ERROR altrimenti
+		*/
+		switch(header_to_server.command_type){
+			case HELP:
+				err = help(str, buf, &header_to_server);
+				continue; //non serve alcuna interazione con il server
+				break;
+			case LOGIN:
+				err = login(str, buf, &header_to_server);
+				break;
+			case SIGNUP:
+				err = signup(str, buf, &header_to_server);
+				break;
+			case INVIA_GIOCATA:
+				err = invia_giocata(str, buf, &header_to_server);
+				break;
+			case VEDI_GIOCATA:
+				err = vedi_giocata(str, buf, &header_to_server);
+				break;
+			case VEDI_ESTRAZIONE:
+				err = vedi_estrazione(str, buf, &header_to_server);
+				break;
+			case VEDI_VINCITE:
+				err = vedi_vincite(str, buf, &header_to_server);
+				break;
+			case ESCI:
+				err = esci(str, buf, &header_to_server);
+				break;
+		}
+
+		if(err != NO_ERROR){
+			show_error(err);
+			continue; //riprova a leggere l'input
+		}
+		// invio prima l'header e buffer
+		send_to_server(sid, &header_to_server, buf, &err);
+		if(err != NO_ERROR){
+			show_error(err);
+			continue; //riprova a leggere l'input
+		}
+		// ricevo header a buffer
+		recv_from_server(sid, &header_from_server, buf, &err);
+		if(err != NO_ERROR){
+			show_error(err);
+			continue; //riprova a leggere l'input
+		}
+		if(header_from_server.error_type != NO_ERROR){
+			show_error((enum ERROR)header_from_server.error_type);
+			continue;
+		}
+
+		// mostro a video la risposta del server
+		// oppure salvo la session_id inviata
+		switch(header_to_server.command_type){
+			case INVIA_GIOCATA:
+				printf("Giocata inviata con successo\n");
+				break;
+			case LOGIN:
+				strcpy(header_to_server.session_id, (char*)buf);
+				break;
+			case SIGNUP:
+				strcpy(header_to_server.session_id, (char*)buf);
+				printf("Iscrizione avvenuta con successo\n");
+				break;
+			case VEDI_GIOCATA:
+				vedi_giocata_ret(buf, header_from_server);
+				break;
+			case VEDI_ESTRAZIONE:
+				vedi_estrazione_ret(buf, header_from_server);
+				break;
+			case VEDI_VINCITE:
+				vedi_vincite_ret(buf, header_from_server);
+				break;
+			default:
+				break;
+		}
+
+	}
+	close(sid);
+	if(err == NO_ERROR)
+		printf("Disconnessione avvenuta con successo\n");
+
+	free(buf);
 	return 0;
 }
