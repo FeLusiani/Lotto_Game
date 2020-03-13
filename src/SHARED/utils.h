@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include "../SHARED/type.h"
 
-int get_int_from_string(char* _str, int *num_);
+void show_error(enum ERROR e);
 
-int isRuota(enum RUOTA r);
+char* next_line(char* str);
 
 enum COMMAND str2command(char *_c);
 

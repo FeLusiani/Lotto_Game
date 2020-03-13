@@ -1,8 +1,6 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -12,12 +10,14 @@
 #include <dirent.h>
 #include <pthread.h>
 
+#include "../SHARED/type.h"
 #include "../SHARED/utils.h"
-#include "../SHARED/llist.h"
+#include "../SHARED/networking.h"
+#include "make_response.h"
 
 
-// massimo di thread gestibili dal sistema
-#define MAX_THREADS 1000
+// massimo num di thread (e dunque utenti connessi) gestibili dal sistema
+#define MAX_THREADS 500
 
 // massimo di richieste di connessione gestibili contemporaneamente
 #define MAX_LISTENER_TAIL 100
@@ -26,29 +26,26 @@
 #define KEEPALIVE 60 * 30
 
 
-typedef struct thread_slot thread_slot;
-
-/* struttura parametro da passare ai thread che si occupa di comunicare con il client*/
-struct thread_slot{
-	int sid; // id del socket relativo
-	pthread_t tid; // id del thread
-	char session_id[11]; // id di sessione
-	int ip, index, n_try; // ip del client (ridondante), index indice del parametro nell'array
-	time_t time_passed; // timestamp in secondi dell'ultima richiesta inviata dal client
-};
-
 /* struttura parametro da passare al thread che si occupa delle estrazioni */
 typedef struct{
 	pthread_t tid; // id del thread
 	int extraction_time; // periodo di estrazioni
 } timer_data;
 
-/* array che contiene i puntatori ai parametri dei thread gestiti */
+// array che contiene i puntatori ai thread_slot (ogni thread che serve un client usa un thread_slot)
 thread_slot** thread_slots;
-/* numero di thread gestiti */
-int N;
+// numero attuale di thread
+int N_threads;
 /* lock per la mutua esclusione sulle precedenti variabili */
 pthread_mutex_t thread_slots_lock;
+
+// restituisce la pos del primo thread_slot con il tid specificato
+// se non lo trova, restituisce -1
+int find_tid(pthread_t _tid){
+	for (int i=0; i<N_threads; i++)
+		if (thread_slots[i]->tid == _tid) return i;
+	return -1;
+}
 
 // la funzione che crea il socket che accetta le connessioni dai client
 int create_listener(int _port){
@@ -75,7 +72,7 @@ int create_listener(int _port){
 	return listener_;
 }
 
-// funzione che legge i paraemtri di ingresso
+// funzione che legge i parametri di ingresso
 // restituisce 1 in caso di errore, 0 altrimenti
 int readInput(int _argc, char *_argv[], int *porta_, int *periodo_){
 	if(_argc == 1){
@@ -97,83 +94,115 @@ int readInput(int _argc, char *_argv[], int *porta_, int *periodo_){
 	return 1;
 }
 
+//
+void disconnection_handler(int signal){
+ 	pthread_t tid = pthread_self();
+	pthread_mutex_lock(&thread_slots_lock);
+	int i = find_tid(tid);
+	if (i == -1) return; // il thread corrente non e' uno di quelli che servono client
+	printf("Thread %d: E' venuta a mancare la connessione con il client\n", i);
+	fflush(stdout);
+	thread_slots[i]->exit = 1;
+	pthread_mutex_unlock(&thread_slots_lock);
+}
 
-void disconnection_handle(int signal){}
+void free_thread_slot(int _index, int _signal){
+	int _i = _index;
+	if(_signal == SIGSTOP){
+		printf("Thread %d: disconnessione volontaria ", _i);
+		fflush(stdout);
+	}
+	if(_signal == SIGALRM){
+		printf("Thread %d: disconnessione per timeout ", _i);
+		fflush(stdout);
+		pthread_cancel(thread_slots[_i]->tid);
+	}
+	printf("dell'utente [%s]\n\n", thread_slots[_i]->user);
+
+	// rilascio delle risorse
+	close(thread_slots[_i]->tid);
+	free(thread_slots[_i]->req_buf);
+	free(thread_slots[_i]->res_buf);
+
+	free(thread_slots[_i]);
+	thread_slots[_i] = NULL;
+	N_threads --;
+	if (N_threads == _i)
+		return; // ho eliminato l'ultimo slot dell'array
+	// in caso contrario, devo compattare
+	thread_slots[_i] = thread_slots[N_threads];
+	thread_slots[_i]->index = _i;
+}
 
 void *handle_socket(void* _args){
-	uint8_t *buf = malloc(MAX_DATA_SIZE * sizeof(uint8_t)), *res = malloc(MAX_DATA_SIZE * sizeof(uint8_t));
-	int exit = 0;
-	thread_slot _p = *((thread_slot*)_args);
+	thread_slot* thread_data = (thread_slot*)_args;
+	char* req_ptr = thread_data->req_buf; // buffer for request message
+	char* res_ptr = thread_data->res_buf; // buffer for response message
+	enum ERROR err = NO_ERROR;
 
-	struct protocol_header_client header_recived;
-	struct protocol_header_server header_send;
 
-	while(!exit){
-		/*
-			PROTOCOLLO:
-				- CLIENT ---> SERVER : invio istruzione
-				- SERVER ---> CLIENT : ritorno errori ed evenuali dati
-			CLIENT ---> SERVER:
-				-   numero di bytes (4 byte) [obbligatorio]
-				-   tipo di operazione (1 byte) [obbligatorio]
-		        -   session_id (11 bytes) [obbligatorio]
-		        -   data (dimensione variabile)
-		    SERVER ---> CLIENT:
-		    	-   numero di bytes (4 byte) [obbligatorio]
-		    	-   tipo di errore (1 byte) [obbligatorio] (se non ci sono errori allora NO_ERROR)
-		    	-   eventuali dati (dimensione variabile)
-		*/
-		pthread_mutex_lock(&thread_slots_lock);
-		((thread_slot*)_args)->time_passed = time(NULL);
-		pthread_mutex_unlock(&thread_slots_lock);
+	while(!thread_data->exit && err != BANNED){
+		// mostra eventuale errore da ciclo precedente
+		if (err != NO_ERROR)
+			show_error(err);
+		err = NO_ERROR;
+		thread_data->last_request = time(NULL);
 
-		recv(_p.sid, &header_recived, sizeof(struct protocol_header_client), 0);
-		if(header_recived.data_size > 0)
-			recv(_p.sid, buf, sizeof(uint8_t) * (header_recived.data_size), 0);
+		err = get_msg(thread_data->sid, req_ptr);
+		if (thread_data->exit == 1) err = DISCONNECTED;
+		if (err != NO_ERROR) break;
 
-		/*
-			osservo se il session id è sbagliato in tal caso qualcuno sta accedendo senza
-			autorizzazione dunque invio un errroe ed esco altrimenti parso il comando ed
-			eseguo determinate operazioni (se l'utente non si è ancora loggato il session_id
-			"0000000000" )
-		*/
-		if(strcmp(_p.session_id, header_recived.session_id) != 0){
-			header_send.error_type = WRONG_SESSID;
-			header_send.data_size = 0;
-			exit = 1;
-		}else{
-			header_send.error_type = NO_ERROR;
-			header_send.data_size = 0;
+		printf("%s", req_ptr);
 
-			/*
-				leggo quale comando è stato inviato
-			*/
-			switch(header_recived.command_type){
-				default:
-					header_send.data_size = 0;
-					header_send.error_type = NO_COMMAND_FOUND;
-					break;
-			}
+		req_ptr = next_line(req_ptr); // salto la prima linea "CLIENT REQUEST"
+
+		// leggo la SESSION ID
+		char session_id[SESS_ID_SIZE];
+		if (sscanf(req_ptr, "SESSION_ID: %s", session_id) == 0){
+			send_error(thread_data->sid, BAD_REQUEST);
+			continue;
+		}
+		req_ptr = next_line(req_ptr);
+
+		if(strcmp(thread_data->session_id, session_id) != 0){
+			send_error(thread_data->sid, WRONG_SESSID);
+			break; //disconnetti
 		}
 
-		/* invio il buffer di risposta al client */
-		send(_p.sid, (void*)&header_send, sizeof(struct protocol_header_server), 0);
-		if(header_send.data_size > 0)
-			send(_p.sid, (void*)res, header_send.data_size, 0);
+		// leggo il comando ricevuto
+		enum COMMAND command;
+		if (sscanf(req_ptr, "COMMAND: %d", (int*)&command) == 0)
+			send_error(thread_data->sid, NO_COMMAND_FOUND);
+		req_ptr = next_line(req_ptr);
 
-		if(header_send.error_type == BANNED)
-			break;
+		// compongo la risposta
+		strcpy(res_ptr, "SERVER RESPONSE\n");
+		res_ptr = next_line(res_ptr);
+		err = make_response(thread_data, command, req_ptr, res_ptr);
+
+		if (err == DISCONNECTED) break;
+
+
+		// rispondo al client
+		if(err != NO_ERROR)
+			err = send_error(thread_data->sid, err);
+		else
+			err = send_msg(thread_data->sid, thread_data->res_buf);
 	}
 
+	if (err!=NO_ERROR) show_error(err);
 
-	free(buf);
-	free(res);
-
+	pthread_mutex_lock(&thread_slots_lock);
+	free_thread_slot(thread_data->index, SIGSTOP);
+	pthread_mutex_unlock(&thread_slots_lock);
 	pthread_exit(NULL);
 	return NULL;
 }
 
+
+
 void *handle_timer(void* _args){
+	pthread_exit(NULL);
 	return NULL;
 }
 
@@ -184,13 +213,14 @@ int main(int argc, char *argv[]){
 	int periodo, porta;
 	res = readInput(argc, argv, &porta, &periodo);
 	if (res != 0) return 0;
+	signal(SIGPIPE, disconnection_handler);
 
 	printf("Avvio gioco del Lotto\nPorta: %d\nPeriodo: %d\n\n", porta, periodo);
 
 	// array di thread_slot, numero di thread attivi, e mutex per queste due variabili
 	pthread_mutex_init(&thread_slots_lock, NULL);
-	thread_slots = malloc(sizeof(thread_slot*) * MAX_THREADS);
-	N = 0;
+	thread_slots = (thread_slot**)malloc(MAX_THREADS*sizeof(thread_slot*));
+	N_threads = 0;
 
 	timer_data timer; // parametro per il thread controllore
 	timer.tid = 0;
@@ -200,16 +230,16 @@ int main(int argc, char *argv[]){
 	int listener; // Socket per l'ascolto
 	listener = create_listener(porta);
 	if(listener == 0){
-		printf("non è stato possibile creare il server: %s\n", strerror(errno));
+		printf("Fallita creazione server: %s\n", strerror(errno));
 		return 0;
 	}
 
-	printf("server avviato con successo\n");
+	printf("Server avviato con successo\n");
 
 	pthread_create(&timer.tid, NULL, handle_timer, &timer); // avvio il timer
 
 	while(1){
-		if(N < MAX_THREADS){
+		if(N_threads < MAX_THREADS){
 			struct sockaddr_in cl_addr; // Indirizzo client
 			int addrlen = sizeof(cl_addr);
 			int new_socket;
@@ -218,22 +248,28 @@ int main(int argc, char *argv[]){
 			pthread_mutex_lock(&thread_slots_lock);
 
 			/* creo i parametri per il thread N-esimo che gestisce un socket */
-			thread_slots[N] = malloc(sizeof(thread_slot));
-			thread_slots[N]->sid = new_socket;
-			thread_slots[N]->tid = N;
-			thread_slots[N]->ip =  cl_addr.sin_addr.s_addr;
-			thread_slots[N]->n_try = 0;
-			thread_slots[N]->index = N;
-			strcpy(thread_slots[N]->session_id, "0000000000");
+			thread_slots[N_threads] = (thread_slot*)malloc(sizeof(thread_slot));
+			thread_slots[N_threads]->sid = new_socket;
+			thread_slots[N_threads]->req_buf = (char*)malloc(MAX_MSG_LENGTH); // buffer for request message
+			thread_slots[N_threads]->res_buf = (char*)malloc(MAX_MSG_LENGTH); // buffer for response message
+			thread_slots[N_threads]->ip =  cl_addr.sin_addr;
+			thread_slots[N_threads]->n_try = 0;
+			thread_slots[N_threads]->last_request = time(NULL);
+			thread_slots[N_threads]->index = N_threads;
+			strcpy(thread_slots[N_threads]->session_id, "0000000000");
+			strcpy(thread_slots[N_threads]->user, "");
+			thread_slots[N_threads]->exit = 0;
 
 			char str[INET_ADDRSTRLEN];
-			inet_ntop( AF_INET, &thread_slots[N]->ip, str, INET_ADDRSTRLEN );
-			printf("nuova connessione da: %s, posizione nell'array dei thread: %d \n", str, N);
+			inet_ntop( AF_INET, &thread_slots[N_threads]->ip, str, INET_ADDRSTRLEN );
+			printf("nuova connessione da: %s, posizione nell'array dei thread: %d \n", str, N_threads);
 
-			pthread_create(&thread_slots[N]->tid, NULL, handle_socket, thread_slots[N]); // avvio il gestroe del client
-			N++;
+			 // avvio il gestroe del client
+			pthread_create(&thread_slots[N_threads]->tid, NULL, handle_socket, thread_slots[N_threads]);
+			N_threads++;
 
 			pthread_mutex_unlock(&thread_slots_lock);
+
 
 		}
 	}

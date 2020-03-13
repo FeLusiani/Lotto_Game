@@ -1,58 +1,10 @@
 #include "message.h"
 
-// NOT_SIGNED, NO_COMMAND_FOUND, CREDENTIAL_TOO_LONG, NO_ERROR, USER_ALREADY_TAKEN
-void show_error(enum ERROR e){
-	char *msg = "\0";
-	switch(e){
-		case NO_ERROR:
-		msg = "";
-		break;
-		case NOT_SIGNED:
-		msg = "non puoi accedere a queste funzioni, accedi o iscriviti prima.\n";
-		break;
-		case NO_COMMAND_FOUND:
-		msg = "comando non riconosciuto (digita !help per la lista di comandi)\n";
-		break;
-		case CREDENTIAL_WRONG_SIZE:
-		msg = "il nome o/e la password sono troppi lunghi o troppo corti (max 50 caratteri min 4).\n";
-		break;
-		case USER_ALREADY_TAKEN:
-		msg = "Mi dispiace il nome utente scelto viene gia utilizzato.\n";
-		break;
-		case CREDENTIAL_NOT_CORRECT:
-		msg = "nome utente e/o password sbagliati\n";
-		break;
-		case BAD_FORMAT:
-		msg = "il formato dell'istruzione inviata era sbagliato (controlla help)\n";
-		break;
-		case BANNED:
-		msg = "hai fatto troppi login riprovare tra un po'\n";
-		break;
-		case WRONG_SESSID:
-		msg = "non sei autorizzato ad usare questa connessione\n";
-		break;
-		case SYNTAX_ERROR:
-		msg = "errore di sintassi non hai inserito i dati in modo sintatticamente corretto\n";
-		break;
-		case ALREADY_LOGGED:
-		msg = "sei già connesso con un utente\n";
-		break;
-		case THREAD_LOGGED_IN:
-		msg = "mi dispiace ma questo utente risulta già connesso\n";
-		break;
-		case DISCONNECTED:
-		msg = "non riesco a raggiungere il server\n";
-		break;
-		default:
-		msg = "errore non gestito\n";
-		break;
-	}
-	printf("%s", msg);
-}
+
 
 //HELP, SIGNUP, LOGIN, INVIA_GIOCATA, VEDI_GIOCATA, VEDI_ESTRAZIONE, VEDI_VINCITE, ESCI, NO_COMMAND
 void show_help(enum COMMAND c){
-	char *str, *help, *signup, *login, *invia_giocata, *vedi_giocata, *vedi_estrazione, *vedi_vincite, *esci, *basic;
+	const char *str, *help, *signup, *login, *invia_giocata, *vedi_giocata, *vedi_estrazione, *vedi_vincite, *esci, *basic;
     basic =           "*************************** BENVENUTO AL GIOCO DEL LOTTO ***************************\n"
                       "Sono disponibili i seguenti comandi:\n\n"
                       "1) !help <comando> : mostra i dettagli di un comando\n"

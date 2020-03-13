@@ -1,5 +1,59 @@
 #include "utils.h"
 
+// NOT_SIGNED, NO_COMMAND_FOUND, CREDENTIAL_TOO_LONG, NO_ERROR, USER_ALREADY_TAKEN
+void show_error(enum ERROR e){
+	const char *msg = "\0";
+	switch(e){
+		case NO_ERROR:
+		msg = "";
+		break;
+		case NOT_LOGGED_IN:
+		msg = "Utente non loggato.\n";
+		break;
+		case NO_COMMAND_FOUND:
+		msg = "Comando non riconosciuto (digita !help per la lista di comandi)\n";
+		break;
+		case WRONG_CREDENTIALS_SIZE:
+		msg = "Il nome o/e la password sono troppi lunghi o troppo corti (max 50 caratteri min 4).\n";
+		break;
+		case USER_ALREADY_TAKEN:
+		msg = "Il nome utente scelto e` gia` in uso.\n";
+		break;
+		case WRONG_CREDENTIALS:
+		msg = "Nome utente e/o password sbagliati\n";
+		break;
+		case BAD_REQUEST:
+		msg = "Error: Bad Request to Server\n";
+		break;
+		case BANNED:
+		msg = "Numero di tentativi esaurito, riprova piu` tardi.\n";
+		break;
+		case WRONG_SESSID:
+		msg = "Error: Wrong Session ID\n";
+		break;
+		case SYNTAX_ERROR:
+		msg = "Errore di sintassi: il comando non era ben composto.\n";
+		break;
+		case ALREADY_LOGGED:
+		msg = "Utente gia` connesso.\n";
+		break;
+		case THREAD_LOGGED_IN:
+		msg = "L'utente specificato risulta già connesso.\n";
+		break;
+		case DISCONNECTED:
+		msg = "La connessione e' venuta a mancare\n";
+		break;
+		case SERVER_ERROR:
+		msg = "Il server ha riscontrato un errore\n";
+		break;
+		default:
+		msg = "errore non gestito\n";
+		break;
+	}
+	printf("%s", msg);
+	fflush(stdout);
+}
+
 // HELP, SIGNUP, LOGIN, INVIA_GIOCATA, VEDI_GIOCATA, VEDI_ESTRAZIONE, VEDI_VINCITE, ESCI
 enum COMMAND str2command(char *_string){
 	if (strcmp("!help", _string) == 0)
@@ -73,14 +127,15 @@ enum RUOTA str2ruota(char *_string){
 //BARI, CAGLIARI, FIRENZE, GENOVA, MILANO, NAPOLI, PALERMO, ROMA, TORIO, VENEZIA, NAZIONALE, TUTTE
 
 
-/* ritorna la lunghezza della stringa e setta a 1 flag se non trova il carattere '\0' prima di max */
-int strlenbelow(char* str, int max, int *flag){
-	int i;
-	*flag = 0;
-	for(i = 0; i < max && str[i] != '\0'; i++){};
-	if(i == max - 1 && str[i] != '\0')
-		*flag = 1;
-	return i;
+// restituisce il puntatore alla prossima linea (prima pos dopo un \n)
+// Se non trova nessun \n, restituisce NULL
+// la funzione cerca fino a quando non trova \0, fino a max 1000 caratteri
+char* next_line(char* str){
+	for(int i=0; str[i] != '\0' && i < 1000; i++){
+		if (str[i] == '\n')
+			return &str[i+1];
+	};
+	return NULL;
 }
 
 /* calcola le disposizioni di N,k calcloate come D(N, k) = N! / (N - k)! */
