@@ -2,4 +2,5 @@
 # Viene utilizzato sia per verificare se un IP e` correntemente considerato bannato, sia come file di log relativo ai ban
 # Linee vuote o che iniziano per "#" vengono ignorate
 
-0.0.0.0 TIME=[1584140109] 2020-03-13 23:55:09
+10.2.58.131 TIME=[1584140109] 2020-03-13 23:55:09
+
