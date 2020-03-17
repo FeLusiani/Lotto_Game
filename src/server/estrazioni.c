@@ -138,8 +138,11 @@ void apply_estrazione(int numeri_estratti[N_RUOTE][5], const char* _time_string)
                 }
             }
 
-
-            if (indovinati_counter == 0) continue;
+            // controllo se ho vinto su almeno una combo
+            // faccio avanzare i all'indice del primo importo non nullo
+            int i = 0;
+            for (i=0;i<N_COMBO && importi[i] == 0; i++);
+            if (indovinati_counter <= i) continue; // ho attivato solo combo inferiori su cui non ho puntato
 
             if (vincita == 0){ // prima giocata dell'estrazione a causare una vincita
                 fprintf(vincite_f, "Estrazione del %s\n", _time_string);
