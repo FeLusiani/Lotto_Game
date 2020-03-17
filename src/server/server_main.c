@@ -14,6 +14,7 @@
 #include "../SHARED/utils.h"
 #include "../SHARED/networking.h"
 #include "make_response.h"
+#include "estrazioni.h"
 
 
 // massimo num di thread (e dunque utenti connessi) gestibili dal sistema
@@ -26,10 +27,10 @@
 #define KEEPALIVE 60 * 30
 
 
-/* struttura parametro da passare al thread che si occupa delle estrazioni */
+// struttura passata al thread controllore
 typedef struct{
 	pthread_t tid; // id del thread
-	int extraction_time; // periodo di estrazioni
+	int periodo_estraz; // periodo di estrazioni
 } timer_data;
 
 // array che contiene i puntatori ai thread_slot (ogni thread che serve un client usa un thread_slot)
@@ -80,12 +81,14 @@ int readInput(int _argc, char *_argv[], int *porta_, int *periodo_){
 		return 1;
 	}
 	else if(_argc == 2){
-		*periodo_ = 300;
+		*periodo_ = 300; // 300 sec == 5 min
 	    *porta_ = atoi(_argv[1]);
 		return 0;
 	}
 	else if(_argc == 3){
 		*periodo_ = atoi(_argv[2]);
+		*porta_ = atoi(_argv[1]);
+		return 0;
 	}
 	else if(_argc > 3){
 		printf("ERRORE: troppi parametri di ingresso\n");
@@ -136,12 +139,13 @@ void free_thread_slot(int _index, int _signal){
 
 void *handle_socket(void* _args){
 	thread_slot* thread_data = (thread_slot*)_args;
-	char* req_ptr = thread_data->req_buf; // buffer for request message
-	char* res_ptr = thread_data->res_buf; // buffer for response message
 	enum ERROR err = NO_ERROR;
 
 
 	while(!thread_data->exit && err != BANNED){
+		char* req_ptr = thread_data->req_buf; // buffer for request message
+		char* res_ptr = thread_data->res_buf; // buffer for response message
+
 		// mostra eventuale errore da ciclo precedente
 		if (err != NO_ERROR)
 			show_error(err);
@@ -152,9 +156,8 @@ void *handle_socket(void* _args){
 		if (thread_data->exit == 1) err = DISCONNECTED;
 		if (err != NO_ERROR) break;
 
-		printf("%s", req_ptr);
-
 		req_ptr = next_line(req_ptr); // salto la prima linea "CLIENT REQUEST"
+		fflush(stdout);
 
 		// leggo la SESSION ID
 		char session_id[SESS_ID_SIZE];
@@ -174,6 +177,8 @@ void *handle_socket(void* _args){
 		if (sscanf(req_ptr, "COMMAND: %d", (int*)&command) == 0)
 			send_error(thread_data->sid, NO_COMMAND_FOUND);
 		req_ptr = next_line(req_ptr);
+
+		if (command == ESCI) break;
 
 		// compongo la risposta
 		strcpy(res_ptr, "SERVER RESPONSE\n");
@@ -200,8 +205,14 @@ void *handle_socket(void* _args){
 }
 
 
-
 void *handle_timer(void* _args){
+	timer_data* timer = (timer_data*)_args;
+
+	while(1){ //ciclo infinto
+		sleep(timer->periodo_estraz); // aspetto la prossima estrazione
+		make_estrazione();
+	}
+
 	pthread_exit(NULL);
 	return NULL;
 }
@@ -215,17 +226,12 @@ int main(int argc, char *argv[]){
 	if (res != 0) return 0;
 	signal(SIGPIPE, disconnection_handler);
 
-	printf("Avvio gioco del Lotto\nPorta: %d\nPeriodo: %d\n\n", porta, periodo);
+	printf("Avvio gioco del Lotto\nPorta: %d\nPeriodo: %d sec\n\n", porta, periodo);
 
 	// array di thread_slot, numero di thread attivi, e mutex per queste due variabili
 	pthread_mutex_init(&thread_slots_lock, NULL);
 	thread_slots = (thread_slot**)malloc(MAX_THREADS*sizeof(thread_slot*));
 	N_threads = 0;
-
-	timer_data timer; // parametro per il thread controllore
-	timer.tid = 0;
-	timer.extraction_time = 60 * periodo;
-
 
 	int listener; // Socket per l'ascolto
 	listener = create_listener(porta);
@@ -236,6 +242,9 @@ int main(int argc, char *argv[]){
 
 	printf("Server avviato con successo\n");
 
+	timer_data timer; // parametro per il thread controllore
+	timer.tid = 0;
+	timer.periodo_estraz = periodo;
 	pthread_create(&timer.tid, NULL, handle_timer, &timer); // avvio il timer
 
 	while(1){
@@ -264,7 +273,7 @@ int main(int argc, char *argv[]){
 			inet_ntop( AF_INET, &thread_slots[N_threads]->ip, str, INET_ADDRSTRLEN );
 			printf("nuova connessione da: %s, posizione nell'array dei thread: %d \n", str, N_threads);
 
-			 // avvio il gestroe del client
+			 // avvio il gestore del client
 			pthread_create(&thread_slots[N_threads]->tid, NULL, handle_socket, thread_slots[N_threads]);
 			N_threads++;
 

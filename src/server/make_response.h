@@ -5,7 +5,11 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <dirent.h>
+
 #include "../SHARED/type.h"
+#include "../SHARED/utils.h"
+#include "server_settings.h"
 
 typedef struct thread_slot thread_slot;
 
@@ -23,6 +27,4 @@ struct thread_slot{
 	int exit; // quando posto 1, causa la terminazione del thread
 };
 
-enum ERROR make_response(thread_slot* _thread_data, enum COMMAND command, char* msg_ptr, char*res_buf);
-
-int is_banned(struct in_addr ip);
+enum ERROR make_response(thread_slot* _thread_data, enum COMMAND command, char* msg_ptr, char*res_ptr);

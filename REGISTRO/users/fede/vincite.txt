@@ -3,3 +3,6 @@ Estrazione del 17-03-2020 ore 01:26:50
  tutte    5 >>  Estratto 20.72
  Bari Cagliari    34 29 1 >>  Ambo 8.33
 *******************************************
+Estrazione del 17-03-2020 ore 11:43:15
+ Bari Cagliari    1 2 3 4 5 6 7 8 9 >>  Cinquina 0 Quaterna 0 Terno 0 Ambo 0 Estratto 0.62
+*******************************************

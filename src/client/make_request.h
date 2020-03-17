@@ -2,6 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "../SHARED/type.h"
+#include "../SHARED/utils.h"
 #include "message.h"
 
 // le seguenti funzioni sono utilizzate per eseguire i comandi del client

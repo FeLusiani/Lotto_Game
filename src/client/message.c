@@ -12,7 +12,7 @@ void show_help(enum COMMAND c){
                       "3) !login <username> <password> : autentica un utente precedentemente iscritto\n"
                       "4) !invia_giocata <giocata> : invia una giocata al server\n"
                       "5) !vedi_giocata <tipo> : vede le giocate di un determinato tipo \n"
-                      "6) !vedi_estrazione <n> <ruota> : mostra le precedenti n estrazioni su una\n determinata ruota\n"
+                      "6) !vedi_estrazioni <n> <ruota> : mostra le precedenti n estrazioni su una\n determinata ruota\n"
 	                  "7) !esci : effettua il logout dell utente\n";
     help =            "-!help <comando> : mostra i dettagli di un determinato <comando>\n";
     signup =          "-!signup <username> <password> : crea un nuovo utente <username> <password> possono\n"
@@ -27,9 +27,9 @@ void show_help(enum COMMAND c){
                       "   che indicano la scommesso sul uscita rispettivamente di ESTRATTO, AMBO, TERNA, QUATERNA,\n"
                       "   CINQUINA, il numero di valori deve essere uguali a quello di numeri (mettere 0 se non si\n"
                       "   vuole scommetere)\n";
-    vedi_giocata =    "-!vedi_giocata <tipo> : se <tipo> = 1 mostra le giocate attive ovvero quello di cui non si sa\n"
+    vedi_giocata =    "-!vedi_giocate <tipo> : se <tipo> = 1 mostra le giocate attive ovvero quello di cui non si sa\n"
                       "   ancora il risultato se <tipo> = 0 mostra le giocate effettuate di cui si conosce il risultato\n";
-    vedi_estrazione = "-!vedi_estrazione <n> <routa> : mostra le n estrazioni su una specifica ruota (mettere tutte oppure\n"
+    vedi_estrazione = "-!vedi_estrazioni <n> <routa> : mostra le n estrazioni su una specifica ruota (mettere tutte oppure\n"
                       "   ingorare il campo se si vogliono di tutte le ruote)\n";
     vedi_vincite =    "-!vedi_vincite : mostra tutte le vincite dell'utente\n";
     esci =            "-!esci : effettua il logout dell utente\n";
@@ -46,10 +46,10 @@ void show_help(enum COMMAND c){
 		case INVIA_GIOCATA:
 		str = invia_giocata;
 		break;
-		case VEDI_GIOCATA:
+		case VEDI_GIOCATE:
 		str = vedi_giocata;
 		break;
-		case VEDI_ESTRAZIONE:
+		case VEDI_ESTRAZIONI:
 		str = vedi_estrazione;
 		break;
 		case VEDI_VINCITE:

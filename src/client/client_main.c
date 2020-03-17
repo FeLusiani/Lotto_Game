@@ -23,21 +23,54 @@ void disconnection_handler(int signal){
 }
 
 
-enum ERROR display_giocata(char* _msg){
-	printf("%s", _msg);
+enum ERROR display_giocate(char* _msg){
+	const char* format_giocata = "RUOTE_GIOCATE: %s\n"
+								 "NUMERI_GIOCATI:%[^\n]\n"
+								 "IMPORTI: %d %d %d %d %d\n%n";
+	char ruote_giocate[N_RUOTE+1];
+	char num_giocati[50];
+	int importi[N_COMBO];
+	int chars_read;
+	int giocate_counter = 1;
+	while(1){
+		printf("\n");
+		int res = sscanf(_msg, format_giocata, ruote_giocate, num_giocati,
+						 &importi[0], &importi[1], &importi[2], &importi[3], &importi[4],
+						 &chars_read);
+
+		if (res < 7) break;
+
+		_msg = &_msg[chars_read]; // avanzo il puntatore per parsare le giocate
+		printf(" %d)", giocate_counter++);
+		// stampa le ruote
+		if (strcmp(ruote_giocate, "XXXXXXXXXXX") == 0)
+			printf(" tutte");
+		else{
+			for (int i=0; i<N_RUOTE; i++){
+				if (ruote_giocate[i] == '-') continue;
+				enum RUOTA r = (enum RUOTA ) i;
+				printf(" %s", ruota2str(r));
+			}
+		}
+		// stampo i numeri giocati
+		printf("%s", num_giocati);
+		// stampo gli importi in ordine inverso
+		const char* combo[N_COMBO];
+		combo[0] = "estratto";
+		combo[1] = "ambo";
+		combo[2] = "terno";
+		combo[3] = "quaterna";
+		combo[4] = "cinquina";
+		for (int i=N_COMBO-1; i>=0; i--){
+			if (importi[i] == 0)
+				continue;
+			double importo_euro = (float)importi[i] / 100;
+			printf(" * %.2f %s", importo_euro, combo[i]);
+		}
+
+	}
 	return NO_ERROR;
 }
-
-enum ERROR display_estrazione(char* _msg){
-	printf("%s", _msg);
-	return NO_ERROR;
-}
-
-enum ERROR display_vincite(char* _msg){
-	printf("%s", _msg);
-	return NO_ERROR;
-}
-
 
 //	************************************************** MAIN *****************************************************************
 int main (int argc, char *argv[]) {
@@ -54,7 +87,7 @@ int main (int argc, char *argv[]) {
 	ip_address = argv[1];
 	port = atoi(argv[2]);
 
-	char* msg_buf = (char*)malloc(MAX_MSG_LENGTH); //buffer su cui scrivere/leggere data per/da il server
+	char* const msg_buf = (char*)malloc(MAX_MSG_LENGTH); //buffer su cui scrivere/leggere data per/da il server
 	char session_id[SESS_ID_SIZE] = "0000000000";
 	enum ERROR err = NO_ERROR;
 	enum COMMAND command = NO_COMMAND;
@@ -76,7 +109,7 @@ int main (int argc, char *argv[]) {
 	}
 
 	if(i == 10){
-		printf("impossibile connettersi al server: %s\n", strerror(errno));
+		printf("Impossibile connettersi al server: %s\n", strerror(errno));
 		return 0;
 	}
 
@@ -130,8 +163,8 @@ int main (int argc, char *argv[]) {
 		err = get_msg(sid, msg_buf);
 		if(err != NO_ERROR) continue; //riprova a leggere l'input
 
-		printf("\n%s\n", msg_buf); /////////////////////////////////////////////////////////////////
-		fflush(stdout);
+		// printf("\n%s\n", msg_buf); /////////////////////////////////////////////////////////////////
+		// fflush(stdout);
 
 		char* msg_ptr = msg_buf; //pointer per parsare la risposta
 		msg_ptr = next_line(msg_ptr); // salto la prima linea "SERVER RESPONSE"
@@ -148,20 +181,18 @@ int main (int argc, char *argv[]) {
 			case LOGIN:
 				sscanf(msg_ptr, "SESSION_ID: %s\n", session_id);
 				printf("Login avvenuto con successo\n");
-
-				printf("SESSION ID: %s", session_id);
 				break;
 			case SIGNUP:
 				printf("Iscrizione avvenuta con successo\n");
 				break;
-			case VEDI_GIOCATA:
-				err = display_giocata(msg_ptr);
+			case VEDI_GIOCATE:
+				err = display_giocate(msg_ptr);
 				break;
-			case VEDI_ESTRAZIONE:
-				err = display_estrazione(msg_ptr);
+			case VEDI_ESTRAZIONI:
+				printf("%s\n", msg_ptr);
 				break;
 			case VEDI_VINCITE:
-				err = display_vincite(msg_ptr);
+				printf("%s\n", msg_ptr);
 				break;
 			default:
 				break;
