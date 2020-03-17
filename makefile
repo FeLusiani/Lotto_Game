@@ -10,7 +10,7 @@ SRCDIR     = src
 
 # Object files
 SHARED_OBJFILES = utils.o networking.o
-CLIENT_OBJFILES = client_main.o message.o make_request.o $(SHARED_OBJFILES)
+CLIENT_OBJFILES = client_main.o help.o make_request.o $(SHARED_OBJFILES)
 SERVER_OBJFILES = server_main.o make_response.o estrazioni.o $(SHARED_OBJFILES)
 
 # Binary files
