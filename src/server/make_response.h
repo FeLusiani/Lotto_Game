@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include <dirent.h>
+#include <unistd.h>
 
 #include "../shared/type.h"
 #include "../shared/utils.h"

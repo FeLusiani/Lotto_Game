@@ -227,6 +227,11 @@ enum ERROR vedi_estrazioni(thread_slot* thread_data, char* req_ptr, char* res_pt
 
     if (n_estr <= 0) return NO_ERROR;
 
+    // controllo se il file delle estrazioni esiste
+    if ( access( ESTRAZ_FILE, F_OK ) == -1){
+        sprintf(res_ptr, "Non ci sono estrazioni in memoria.\n");
+        return NO_ERROR;
+    }
     // apro il file delle estrazioni
     FILE *file;
     file = fopen(ESTRAZ_FILE,"r");

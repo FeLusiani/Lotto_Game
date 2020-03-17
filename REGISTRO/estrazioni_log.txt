@@ -1,4 +1,4 @@
-Estrazione del 17-03-2020 ore 15:32:26
+Estrazione del 18-03-2020 ore 00:13:44
  Bari           74        34        18        26        20        
  Cagliari       87        76        29        19        68        
  Firenze        33        23        83        32        84        
@@ -10,7 +10,7 @@ Estrazione del 17-03-2020 ore 15:32:26
  Torio          70        33        52        39        17        
  Venezia        20        39        21        63        57        
  Nazionale      40        88        36        11        72        
-Estrazione del 17-03-2020 ore 15:32:29
+Estrazione del 18-03-2020 ore 00:13:47
  Bari           64        90        83        50        68        
  Cagliari       16        75        5         73        11        
  Firenze        36        27        58        41        42        
@@ -22,7 +22,7 @@ Estrazione del 17-03-2020 ore 15:32:29
  Torio          88        17        49        73        61        
  Venezia        46        77        90        23        74        
  Nazionale      22        83        63        64        47        
-Estrazione del 17-03-2020 ore 15:32:32
+Estrazione del 18-03-2020 ore 00:13:50
  Bari           53        17        22        57        47        
  Cagliari       2         83        66        74        30        
  Firenze        41        55        16        59        76        
@@ -34,195 +34,3 @@ Estrazione del 17-03-2020 ore 15:32:32
  Torio          2         54        85        33        39        
  Venezia        56        50        68        71        28        
  Nazionale      29        47        90        71        48        
-Estrazione del 17-03-2020 ore 15:32:35
- Bari           51        20        21        18        63        
- Cagliari       25        68        60        84        22        
- Firenze        82        72        14        25        53        
- Genova         23        49        46        44        18        
- Milano         48        66        42        27        2         
- Napoli         48        2         89        62        82        
- Palermo        39        90        52        34        38        
- Roma           57        67        25        77        52        
- Torio          48        75        9         11        15        
- Venezia        72        84        49        7         4         
- Nazionale      37        6         49        55        87        
-Estrazione del 17-03-2020 ore 15:32:38
- Bari           81        35        69        57        29        
- Cagliari       61        78        60        57        27        
- Firenze        40        16        55        30        50        
- Genova         58        74        88        21        84        
- Milano         63        69        44        64        77        
- Napoli         55        32        58        66        31        
- Palermo        78        20        14        28        15        
- Roma           6         11        65        32        60        
- Torio          43        76        86        58        13        
- Venezia        39        6         35        40        7         
- Nazionale      1         78        37        45        34        
-Estrazione del 17-03-2020 ore 15:32:41
- Bari           4         69        38        36        17        
- Cagliari       40        89        46        19        23        
- Firenze        26        80        51        24        46        
- Genova         71        47        86        36        45        
- Milano         68        28        37        5         1         
- Napoli         78        63        13        74        5         
- Palermo        4         39        27        78        64        
- Roma           67        69        58        47        22        
- Torio          40        39        32        7         15        
- Venezia        20        61        69        84        87        
- Nazionale      79        32        84        47        86        
-Estrazione del 17-03-2020 ore 15:32:44
- Bari           1         65        63        75        49        
- Cagliari       62        29        13        74        81        
- Firenze        88        15        18        16        86        
- Genova         80        17        43        24        26        
- Milano         39        38        69        27        60        
- Napoli         22        70        89        10        20        
- Palermo        29        33        68        9         8         
- Roma           24        77        16        20        22        
- Torio          24        55        13        83        50        
- Venezia        89        16        38        71        83        
- Nazionale      7         87        41        33        3         
-Estrazione del 17-03-2020 ore 15:32:47
- Bari           57        48        70        16        53        
- Cagliari       79        61        33        1         39        
- Firenze        19        69        65        20        67        
- Genova         34        71        22        61        43        
- Milano         25        56        59        63        52        
- Napoli         51        83        45        27        52        
- Palermo        11        55        10        43        6         
- Roma           24        63        57        76        51        
- Torio          77        60        85        16        18        
- Venezia        24        26        31        48        90        
- Nazionale      75        17        28        11        73        
-Estrazione del 17-03-2020 ore 15:32:50
- Bari           17        38        51        76        82        
- Cagliari       74        31        67        28        14        
- Firenze        21        45        67        13        89        
- Genova         42        69        15        11        5         
- Milano         87        48        1         88        6         
- Napoli         85        70        62        88        56        
- Palermo        62        89        88        11        5         
- Roma           40        44        87        79        76        
- Torio          84        90        14        77        81        
- Venezia        74        16        2         54        35        
- Nazionale      72        11        44        90        6         
-Estrazione del 17-03-2020 ore 15:32:53
- Bari           42        5         46        49        88        
- Cagliari       27        82        88        87        61        
- Firenze        77        50        90        51        73        
- Genova         86        1         50        44        29        
- Milano         7         46        11        35        69        
- Napoli         19        33        43        71        24        
- Palermo        50        79        17        84        48        
- Roma           8         44        81        27        45        
- Torio          26        59        11        70        64        
- Venezia        87        10        22        26        54        
- Nazionale      12        40        82        31        15        
-Estrazione del 17-03-2020 ore 15:32:56
- Bari           89        69        35        26        45        
- Cagliari       28        34        86        65        66        
- Firenze        16        12        74        37        76        
- Genova         4         79        3         35        20        
- Milano         10        59        56        28        2         
- Napoli         5         83        82        4         58        
- Palermo        90        84        86        85        79        
- Roma           83        64        82        43        17        
- Torio          71        86        20        10        87        
- Venezia        44        58        75        50        22        
- Nazionale      52        4         19        34        74        
-Estrazione del 17-03-2020 ore 15:32:59
- Bari           62        87        12        21        28        
- Cagliari       35        79        68        65        48        
- Firenze        2         16        85        13        37        
- Genova         9         28        74        11        45        
- Milano         53        29        88        2         67        
- Napoli         39        13        43        25        45        
- Palermo        73        89        60        82        10        
- Roma           82        52        21        46        85        
- Torio          80        60        49        61        82        
- Venezia        78        17        5         71        75        
- Nazionale      66        25        42        69        34        
-Estrazione del 17-03-2020 ore 15:33:02
- Bari           6         16        68        82        28        
- Cagliari       55        41        9         79        19        
- Firenze        46        79        41        14        76        
- Genova         21        50        82        35        44        
- Milano         7         3         8         64        53        
- Napoli         34        74        18        31        36        
- Palermo        39        61        71        33        18        
- Roma           48        22        52        83        42        
- Torio          3         26        78        27        40        
- Venezia        62        36        11        5         14        
- Nazionale      84        50        40        24        85        
-Estrazione del 17-03-2020 ore 15:33:05
- Bari           25        30        22        58        87        
- Cagliari       50        31        37        26        36        
- Firenze        41        82        80        16        1         
- Genova         46        56        14        57        2         
- Milano         16        69        62        90        54        
- Napoli         82        6         85        84        19        
- Palermo        54        23        63        69        83        
- Roma           37        90        47        33        7         
- Torio          78        24        50        86        9         
- Venezia        24        76        64        69        17        
- Nazionale      30        58        51        20        21        
-Estrazione del 17-03-2020 ore 15:33:08
- Bari           88        40        75        82        3         
- Cagliari       65        77        4         69        86        
- Firenze        21        47        48        66        13        
- Genova         75        2         88        74        9         
- Milano         83        29        75        79        47        
- Napoli         18        43        36        38        88        
- Palermo        10        5         22        32        52        
- Roma           24        39        89        86        81        
- Torio          8         38        32        74        7         
- Venezia        2         86        57        61        56        
- Nazionale      29        25        54        45        48        
-Estrazione del 17-03-2020 ore 15:33:11
- Bari           61        33        1         44        74        
- Cagliari       90        38        78        37        10        
- Firenze        5         57        22        52        8         
- Genova         1         81        60        42        39        
- Milano         63        53        22        61        54        
- Napoli         57        54        23        79        84        
- Palermo        23        44        84        59        46        
- Roma           51        31        1         66        26        
- Torio          59        31        52        32        8         
- Venezia        83        67        18        68        3         
- Nazionale      78        12        10        35        11        
-Estrazione del 17-03-2020 ore 17:17:11
- Bari           33        23        83        32        84        
- Cagliari       77        18        11        74        5         
- Firenze        72        83        77        79        71        
- Genova         81        50        44        17        40        
- Milano         60        7         55        52        86        
- Napoli         58        17        9         38        51        
- Palermo        70        33        52        39        17        
- Roma           68        39        21        63        57        
- Torio          40        18        36        11        72        
- Venezia        64        40        88        83        70        
- Nazionale      16        75        84        73        39        
-Estrazione del 17-03-2020 ore 17:34:31
- Bari           33        23        83        32        84        
- Cagliari       77        18        11        74        5         
- Firenze        72        83        77        79        71        
- Genova         81        50        44        17        40        
- Milano         60        7         55        52        86        
- Napoli         58        17        9         38        51        
- Palermo        70        33        52        39        17        
- Roma           68        39        21        63        57        
- Torio          40        18        36        11        72        
- Venezia        64        40        88        83        70        
- Nazionale      16        75        84        73        39        
-Estrazione del 17-03-2020 ore 23:14:08
- Bari           33        23        83        32        84        
- Cagliari       77        18        11        74        5         
- Firenze        72        83        77        79        71        
- Genova         81        50        44        17        40        
- Milano         60        7         55        52        86        
- Napoli         58        17        9         38        51        
- Palermo        70        33        52        39        17        
- Roma           68        39        21        63        57        
- Torio          40        18        36        11        72        
- Venezia        64        40        88        83        70        
- Nazionale      16        75        84        73        39        
