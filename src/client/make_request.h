@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "../SHARED/type.h"
-#include "../SHARED/utils.h"
-#include "message.h"
+#include "../shared/type.h"
+#include "../shared/utils.h"
+#include "help.h"
 
 // le seguenti funzioni sono utilizzate per eseguire i comandi del client
 // ogni funzione si occupa di scrivere il messaggio da scrivere al server (header e buffer)

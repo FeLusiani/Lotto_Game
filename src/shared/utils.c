@@ -184,11 +184,3 @@ int leggi_importo(const char* str){
 
 	return importo;
 }
-
-/* calcola le disposizioni di N,k calcloate come D(N, k) = N! / (N - k)! */
-int disposizioni(int N, int k){
-	int i, res = 1;
-	for(i = N - k + 1; i <= N; i++)
-		res *= i;
-	return res;
-}

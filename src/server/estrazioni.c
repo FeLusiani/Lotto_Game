@@ -53,11 +53,13 @@ void archivia_scommesse(FILE* a_bets_fptr, char* user){
     fclose(o_bets_fptr);
 }
 
-// fattoriale
-long int fact(int n){
-    long int res = 1;
-    for (int i=0; i<n; i++) res *= i+1;
-    return res;
+// calcola le disposizioni di k elementi su N
+// D(N, k) = N! / (N - k)!
+int disposizioni(int N, int k){
+	int i, res = 1;
+	for(i = N - k + 1; i <= N; i++)
+		res *= i;
+	return res;
 }
 
 // aggiorna il file consuntivo dell'user
@@ -191,8 +193,8 @@ void apply_estrazione(int numeri_estratti[N_RUOTE][5], const char* _time_string)
                     continue;
                 }
 
-                int comb_possibili = fact(n_giocati_counter) / fact(n_giocati_counter-i-1);
-                int comb_realizzate = fact(indovinati_counter) / fact(indovinati_counter-i-1);
+                int comb_possibili = disposizioni(n_giocati_counter, i+1);
+                int comb_realizzate = disposizioni(indovinati_counter, i+1);
                 double guadagno = (double) importi[i] / 100.0; // gli importi sono in centesimi
                 guadagno *= valore[i];
                 guadagno *= comb_realizzate / (double) comb_possibili;

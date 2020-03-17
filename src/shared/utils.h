@@ -3,7 +3,7 @@
 
 #include <string.h>
 #include <stdio.h>
-#include "../SHARED/type.h"
+#include "type.h"
 
 void show_error(enum ERROR e);
 

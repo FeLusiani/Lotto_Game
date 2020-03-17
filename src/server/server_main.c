@@ -10,9 +10,9 @@
 #include <dirent.h>
 #include <pthread.h>
 
-#include "../SHARED/type.h"
-#include "../SHARED/utils.h"
-#include "../SHARED/networking.h"
+#include "../shared/type.h"
+#include "../shared/utils.h"
+#include "../shared/networking.h"
 #include "make_response.h"
 #include "estrazioni.h"
 
@@ -140,9 +140,9 @@ void free_thread_slot(int _index, int _signal){
 void *handle_socket(void* _args){
 	thread_slot* thread_data = (thread_slot*)_args;
 	enum ERROR err = NO_ERROR;
+	enum COMMAND command = NO_COMMAND;
 
-
-	while(!thread_data->exit && err != BANNED){
+	while(!thread_data->exit && err != BANNED && command!=ESCI){
 		char* req_ptr = thread_data->req_buf; // buffer for request message
 		char* res_ptr = thread_data->res_buf; // buffer for response message
 
@@ -173,12 +173,9 @@ void *handle_socket(void* _args){
 		}
 
 		// leggo il comando ricevuto
-		enum COMMAND command;
 		if (sscanf(req_ptr, "COMMAND: %d", (int*)&command) == 0)
 			send_error(thread_data->sid, NO_COMMAND_FOUND);
 		req_ptr = next_line(req_ptr);
-
-		if (command == ESCI) break;
 
 		// compongo la risposta
 		strcpy(res_ptr, "SERVER RESPONSE\n");

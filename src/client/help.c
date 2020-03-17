@@ -1,6 +1,4 @@
-#include "message.h"
-
-
+#include "help.h"
 
 //HELP, SIGNUP, LOGIN, INVIA_GIOCATA, VEDI_GIOCATA, VEDI_ESTRAZIONE, VEDI_VINCITE, ESCI, NO_COMMAND
 void show_help(enum COMMAND c){

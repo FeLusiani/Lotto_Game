@@ -6,8 +6,8 @@
 #include <time.h>
 #include <dirent.h>
 
-#include "../SHARED/type.h"
-#include "../SHARED/utils.h"
+#include "../shared/type.h"
+#include "../shared/utils.h"
 #include "server_settings.h"
 
 void make_estrazione();

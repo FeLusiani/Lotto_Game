@@ -8,10 +8,10 @@
 #include <errno.h>
 #include <signal.h>
 
-#include "../SHARED/type.h"
-#include "../SHARED/utils.h"
-#include "../SHARED/networking.h"
-#include "message.h"
+#include "../shared/type.h"
+#include "../shared/utils.h"
+#include "../shared/networking.h"
+#include "help.h"
 #include "make_request.h"
 
 #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
