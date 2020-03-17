@@ -25,7 +25,7 @@ int is_banned(struct in_addr ip){
         if (entry[0] == '\n' || entry[0] == '#') continue; // linea vuota o di commento
         sscanf(entry, "%s TIME=[%jd]", ip_string, &ban_time);
         struct in_addr ip_i;
-        inet_aton(ip_string, &ip_i);
+        inet_pton(AF_INET, ip_string, &ip_i);
         if (ip_i.s_addr != ip.s_addr) continue;
         if (difftime(time(NULL), ban_time) < BAN_TIME)
             is_banned_ = 1;

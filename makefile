@@ -2,7 +2,7 @@
 
 # Compiler and flags
 CC	= gcc
-FLAGS	= -Wall -lpthread -g
+FLAGS	= -Wall -lpthread -std=gnu99
 
 # Directories
 OBJDIR     = build
