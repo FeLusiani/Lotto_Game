@@ -171,6 +171,13 @@ void *handle_socket(void* _args){
 		res_ptr = next_line(res_ptr);
 		err = make_response(thread_data, command, req_ptr, res_ptr);
 
+		if (err == BANNED){
+			send_error(thread_data->sid, err);
+			printf("Tentativo di accesso da ip bannato %s\n", inet_ntoa(thread_data->ip));
+			err = NO_ERROR;
+			break;
+		}
+
 		if (err == DISCONNECTED) break;
 
 

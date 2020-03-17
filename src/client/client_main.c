@@ -204,8 +204,8 @@ int main (int argc, char *argv[]) {
 	if(err == NO_ERROR)
 		printf("Disconnessione avvenuta con successo\n");
 	else{
-		printf("Disconnessione\n");
 		show_error(err);
+		printf("Disconnessione\n");
 	}
 
 	free(msg_buf);
