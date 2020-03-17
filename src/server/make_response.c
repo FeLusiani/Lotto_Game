@@ -300,6 +300,7 @@ enum ERROR vedi_vincite(thread_slot* thread_data, char* req_ptr, char* res_ptr){
 }
 
 enum ERROR esci(thread_slot* thread_data, char* req_ptr, char* res_ptr){
+    sprintf(res_ptr,"Server: session end.\n");
     return NO_ERROR;
 }
 

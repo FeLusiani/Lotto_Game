@@ -16,18 +16,13 @@
 #include "make_response.h"
 #include "estrazioni.h"
 
-
 // massimo num di thread (e dunque utenti connessi) gestibili dal sistema
 #define MAX_THREADS 500
 
 // massimo di richieste di connessione gestibili contemporaneamente
 #define MAX_LISTENER_TAIL 100
 
-// tempo di risposta necessario prima di una disconnessione forzata
-#define KEEPALIVE 60 * 30
-
-
-// struttura passata al thread controllore
+// struttura passata al thread che esegue le estrazioni
 typedef struct{
 	pthread_t tid; // id del thread
 	int periodo_estraz; // periodo di estrazioni
@@ -37,7 +32,7 @@ typedef struct{
 thread_slot** thread_slots;
 // numero attuale di thread
 int N_threads;
-/* lock per la mutua esclusione sulle precedenti variabili */
+// lock per la mutua esclusione sulle precedenti variabili
 pthread_mutex_t thread_slots_lock;
 
 // restituisce la pos del primo thread_slot con il tid specificato
@@ -97,7 +92,7 @@ int readInput(int _argc, char *_argv[], int *porta_, int *periodo_){
 	return 1;
 }
 
-//
+// handler in caso di SIG_PIPE
 void disconnection_handler(int signal){
  	pthread_t tid = pthread_self();
 	pthread_mutex_lock(&thread_slots_lock);
@@ -105,25 +100,18 @@ void disconnection_handler(int signal){
 	if (i == -1) return; // il thread corrente non e' uno di quelli che servono client
 	printf("Thread %d: E' venuta a mancare la connessione con il client\n", i);
 	fflush(stdout);
-	thread_slots[i]->exit = 1;
+	thread_slots[i]->exit = 1; // indica al thread che deve terminare
 	pthread_mutex_unlock(&thread_slots_lock);
 }
 
-void free_thread_slot(int _index, int _signal){
+// libera le risorse associate al thread di index _index nell'array di thread_slots
+void free_thread_slot(int _index){
 	int _i = _index;
-	if(_signal == SIGSTOP){
-		printf("Thread %d: disconnessione volontaria ", _i);
-		fflush(stdout);
-	}
-	if(_signal == SIGALRM){
-		printf("Thread %d: disconnessione per timeout ", _i);
-		fflush(stdout);
-		pthread_cancel(thread_slots[_i]->tid);
-	}
-	printf("dell'utente [%s]\n\n", thread_slots[_i]->user);
+	printf("Thread %d: disconnessione dell'utente %s\n\n", _i, thread_slots[_i]->user);
+	fflush(stdout);
 
 	// rilascio delle risorse
-	close(thread_slots[_i]->tid);
+	close(thread_slots[_i]->sid);
 	free(thread_slots[_i]->req_buf);
 	free(thread_slots[_i]->res_buf);
 
@@ -150,14 +138,15 @@ void *handle_socket(void* _args){
 		if (err != NO_ERROR)
 			show_error(err);
 		err = NO_ERROR;
-		thread_data->last_request = time(NULL);
 
 		err = get_msg(thread_data->sid, req_ptr);
 		if (thread_data->exit == 1) err = DISCONNECTED;
 		if (err != NO_ERROR) break;
 
+		printf("Thread %d received:\n", thread_data->index);
+		printf("%s\n", req_ptr);
+
 		req_ptr = next_line(req_ptr); // salto la prima linea "CLIENT REQUEST"
-		fflush(stdout);
 
 		// leggo la SESSION ID
 		char session_id[SESS_ID_SIZE];
@@ -195,7 +184,7 @@ void *handle_socket(void* _args){
 	if (err!=NO_ERROR) show_error(err);
 
 	pthread_mutex_lock(&thread_slots_lock);
-	free_thread_slot(thread_data->index, SIGSTOP);
+	free_thread_slot(thread_data->index);
 	pthread_mutex_unlock(&thread_slots_lock);
 	pthread_exit(NULL);
 	return NULL;
@@ -260,7 +249,6 @@ int main(int argc, char *argv[]){
 			thread_slots[N_threads]->res_buf = (char*)malloc(MAX_MSG_LENGTH); // buffer for response message
 			thread_slots[N_threads]->ip =  cl_addr.sin_addr;
 			thread_slots[N_threads]->n_try = 0;
-			thread_slots[N_threads]->last_request = time(NULL);
 			thread_slots[N_threads]->index = N_threads;
 			strcpy(thread_slots[N_threads]->session_id, "0000000000");
 			strcpy(thread_slots[N_threads]->user, "");

@@ -23,7 +23,6 @@ struct thread_slot{
 	char user[50]; // nome dell'user connesso
 	struct in_addr ip;
 	int index, n_try; // ip del client (ridondante), index indice del parametro nell'array
-	time_t last_request; // timestamp in secondi dell'ultima richiesta inviata dal client
 	int exit; // quando posto 1, causa la terminazione del thread
 };
 

@@ -163,9 +163,6 @@ int main (int argc, char *argv[]) {
 		err = get_msg(sid, msg_buf);
 		if(err != NO_ERROR) continue; //riprova a leggere l'input
 
-		// printf("\n%s\n", msg_buf); /////////////////////////////////////////////////////////////////
-		// fflush(stdout);
-
 		char* msg_ptr = msg_buf; //pointer per parsare la risposta
 		msg_ptr = next_line(msg_ptr); // salto la prima linea "SERVER RESPONSE"
 		//leggo eventuali errori
@@ -192,6 +189,9 @@ int main (int argc, char *argv[]) {
 				printf("%s\n", msg_ptr);
 				break;
 			case VEDI_VINCITE:
+				printf("%s\n", msg_ptr);
+				break;
+			case ESCI:
 				printf("%s\n", msg_ptr);
 				break;
 			default:
