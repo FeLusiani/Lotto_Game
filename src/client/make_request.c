@@ -1,9 +1,7 @@
 #include "make_request.h"
 #define min(X, Y)  ((X) < (Y) ? (X) : (Y))
-// le seguenti funzioni sono utilizzate per eseguire i comandi del client
-// ogni funzione si occupa di scrivere il messaggio da scrivere al server (header e buffer)
-// Se non ci sono errori, restituisce NO_ERROR
 
+// non genera alcuna richiesta
 enum ERROR help(char *_params, char* msg_){
 	if(_params[0] == '\0'){
 		show_help(NO_COMMAND);
@@ -18,6 +16,10 @@ enum ERROR help(char *_params, char* msg_){
 	return NO_ERROR;
 }
 
+/* corpo della richiesta generata:
+USER: [username]\n
+PWD: [password]\n
+*/
 enum ERROR signup(char *_params, char* msg_){
 	int u_length, p_length;
 	char *user, *pwd;
@@ -47,6 +49,10 @@ enum ERROR signup(char *_params, char* msg_){
 	return NO_ERROR;
 }
 
+/* corpo della richiesta generata:
+USER: [username]\n
+PWD: [password]\n
+*/
 enum ERROR login(char *_params, char* msg_){
 	char *user, *pwd;
 

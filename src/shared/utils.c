@@ -1,5 +1,45 @@
 #include "utils.h"
 
+// restituisce il puntatore alla prossima linea (prima pos dopo un \n)
+// Se non trova nessun \n, restituisce NULL
+// la funzione cerca fino a quando non trova \0, fino a max 1000 caratteri
+char* next_line(char* str){
+	for(int i=0; str[i] != '\0' && i < 1000; i++){
+		if (str[i] == '\n')
+			return &str[i+1];
+	};
+	return NULL;
+}
+
+// legge una stringa contenente un importo in euro e restituisce il numero di centesimi
+// restituisce -1 in caso di errore
+int leggi_importo(const char* str){
+	int importo_intero = -1;
+	char cifra1_cent = '/';
+	char cifra2_cent = '/';
+	int numeri_letti = sscanf(str, "%d.%c%c", &importo_intero, &cifra1_cent, &cifra2_cent);
+
+	if (numeri_letti==0 || importo_intero<0) return -1;
+
+	int importo; // l'importo viene salvato come numero di centesimi (dunque intero)
+	switch(numeri_letti){
+		case 1:
+			importo = importo_intero*100;
+			break;
+		case 2:
+			if (cifra1_cent < '0' || cifra1_cent > '9') return -1;
+			importo = importo_intero*100 + (cifra1_cent-'0')*10;
+			break;
+		case 3:
+			if (cifra1_cent < '0' || cifra1_cent > '9') return -1;
+			if (cifra2_cent < '0' || cifra2_cent > '9') return -1;
+			importo = importo_intero*100 + (cifra1_cent-'0')*10 + (cifra2_cent-'0');
+			break;
+	}
+
+	return importo;
+}
+
 // NOT_SIGNED, NO_COMMAND_FOUND, CREDENTIAL_TOO_LONG, NO_ERROR, USER_ALREADY_TAKEN
 void show_error(enum ERROR e){
 	const char *msg = "\0";
@@ -140,47 +180,4 @@ const char* ruota2str(enum RUOTA _r){
 		case NAZIONALE: return "Nazionale";
 		default: return "";
 	}
-}
-
-//BARI, CAGLIARI, FIRENZE, GENOVA, MILANO, NAPOLI, PALERMO, ROMA, TORIO, VENEZIA, NAZIONALE, TUTTE
-
-
-// restituisce il puntatore alla prossima linea (prima pos dopo un \n)
-// Se non trova nessun \n, restituisce NULL
-// la funzione cerca fino a quando non trova \0, fino a max 1000 caratteri
-char* next_line(char* str){
-	for(int i=0; str[i] != '\0' && i < 1000; i++){
-		if (str[i] == '\n')
-			return &str[i+1];
-	};
-	return NULL;
-}
-
-// legge una stringa contenente un importo in euro e restituisce il numero di centesimi
-// restituisce -1 in caso di errore
-int leggi_importo(const char* str){
-	int importo_intero = -1;
-	char cifra1_cent = '/';
-	char cifra2_cent = '/';
-	int numeri_letti = sscanf(str, "%d.%c%c", &importo_intero, &cifra1_cent, &cifra2_cent);
-
-	if (numeri_letti==0 || importo_intero<0) return -1;
-
-	int importo; // l'importo viene salvato come numero di centesimi (dunque intero)
-	switch(numeri_letti){
-		case 1:
-			importo = importo_intero*100;
-			break;
-		case 2:
-			if (cifra1_cent < '0' || cifra1_cent > '9') return -1;
-			importo = importo_intero*100 + (cifra1_cent-'0')*10;
-			break;
-		case 3:
-			if (cifra1_cent < '0' || cifra1_cent > '9') return -1;
-			if (cifra2_cent < '0' || cifra2_cent > '9') return -1;
-			importo = importo_intero*100 + (cifra1_cent-'0')*10 + (cifra2_cent-'0');
-			break;
-	}
-
-	return importo;
 }

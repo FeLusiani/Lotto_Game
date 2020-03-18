@@ -1,6 +1,7 @@
 #include "make_response.h"
 
-// 1 banned, 0 not banned
+// appende al file BAN_FILE la seguente linea:
+// <IP da bannare> TIME=[<valore numerico timestamp>] <timestamp in formato %d-%m-%Y %H:%M:%S>
 void ban_ip(struct in_addr ip){
     char* ip_string = inet_ntoa(ip);
     char ban_time_string[50];
@@ -13,7 +14,8 @@ void ban_ip(struct in_addr ip){
     fclose(file);
 }
 
-// 1 banned, 0 not banned
+// ritorna 1 se correntemente bannato, 0 altrimenti
+// cerca l'eventuale ban dell'ip in BAN_FILE e controlla se risulta ancora bannato
 int is_banned(struct in_addr ip){
     FILE *file;
     file = fopen(BAN_FILE,"r");

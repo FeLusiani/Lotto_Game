@@ -15,13 +15,19 @@ enum ERROR send_msg(int _sid, char* _msg){
 	return NO_ERROR;
 }
 
-
+/* usato dal server per inviare un messaggio di errore nel formato
+"
+SERVER RESPONSE\n
+ERROR: [errore in forma di numero (enum)]
+"
+*/
 enum ERROR send_error(int _sid, enum ERROR e){
 	char buffer[100];
 	sprintf(buffer, "SERVER RESPONSE\nERROR: %d\n", (int)e);
 	return send_msg(_sid, buffer);
 }
 
+// riceve un messaggio testuale da _sid e le scrive in msg_
 enum ERROR get_msg(int _sid, char* msg_){
 	ssize_t res;
 	uint16_t buf_size;

@@ -1,7 +1,12 @@
 #include "estrazioni.h"
 
-// estrae la prima giocata contenuta nel file puntato da giocate_f
+// legge la prima giocata dal filestream giocate_f
 // restituisce 0 se non riesce ad eseguire la lettura
+// i valori vengono restituiti nei 3 array
+// r_giocate e' una stringa di N_RUOTE caratteri
+// r_giocate[ruota_i] vale 'X' se ruota_i e' stata giocata, '-' altrimenti
+// numeri_ viene riemptio con 0 a destra se i numeri giocati sono meno di 10
+// importi_ viene riemptio con 0 a destra se gli importi giocati sono meno di N_COMBO
 int parse_user_bets(FILE* giocate_f, char r_giocate_[N_RUOTE+1], int numeri_[10], int importi_[N_COMBO]){
     const char* format_giocata;
     format_giocata = "RUOTE_GIOCATE: %s\nNUMERI_GIOCATI:%[^\n]\nIMPORTI:%[^\n]\n";
@@ -37,7 +42,7 @@ int parse_user_bets(FILE* giocate_f, char r_giocate_[N_RUOTE+1], int numeri_[10]
     return 1;
 }
 
-// appende il contenuto del file puntato da a_bets_fptr al file old_bets.txt dell'user
+// appende il contenuto del filestream a_bets_fptr al file old_bets.txt dell'user
 void archivia_scommesse(FILE* a_bets_fptr, char* user){
     // apro il file old_bets
     char filepath[MAX_PATH_LEN];
@@ -64,6 +69,7 @@ int disposizioni(int N, int k){
 
 // aggiorna il file consuntivo dell'user
 // sommando il vettore di guadagni riportati per tipo di combo a quello presente nel file
+// i guadagni sono salvati in centesimi (dunque interi)
 void aggiorna_consuntivo(double vincite[N_COMBO], char* user){
     long int val_file[N_COMBO]; // in centesimi
     // leggo il file consuntivo.txt dell'user
@@ -229,7 +235,7 @@ void apply_estrazione(int numeri_estratti[N_RUOTE][5], const char* _time_string)
 
 /*
 Crea un'estrazione, applica le scommesse attive degli utenti,
-salva l'estrazione nel file delle estrazioni e aggiorna il file delle vincite per ogni utente
+salva l'estrazione in ESTRAZ_FILE e aggiorna il file vincite.txt per ogni utente
 */
 
 void make_estrazione(){
