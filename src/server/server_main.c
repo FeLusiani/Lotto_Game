@@ -135,8 +135,10 @@ void *handle_socket(void* _args){
 		char* res_ptr = thread_data->res_buf; // buffer for response message
 
 		// mostra eventuale errore da ciclo precedente
-		if (err != NO_ERROR)
+		if (err != NO_ERROR){
+			printf("Thread %d: ",thread_data->index);
 			show_error(err);
+		}
 		err = NO_ERROR;
 
 		err = get_msg(thread_data->sid, req_ptr);
@@ -188,7 +190,10 @@ void *handle_socket(void* _args){
 			err = send_msg(thread_data->sid, thread_data->res_buf);
 	}
 
-	if (err!=NO_ERROR) show_error(err);
+	if (err!=NO_ERROR){
+		printf("Thread %d: ",thread_data->index);
+		show_error(err);
+	}
 
 	pthread_mutex_lock(&thread_slots_lock);
 	free_thread_slot(thread_data->index);
