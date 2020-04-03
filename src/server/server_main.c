@@ -35,6 +35,14 @@ int N_threads;
 // lock per la mutua esclusione sulle precedenti variabili
 pthread_mutex_t thread_slots_lock;
 
+// variabili per controllare che i thread che servono i clienti
+// non processino l'inserimento di nuove giocate fintanto che c'è un'estrazione in corso
+// altrimenti la giocata potrebbe venire persa
+int estrazione_in_corso;
+pthread_mutex_t extr_lock;
+pthread_cond_t end_of_extraction;
+
+
 // restituisce la pos del primo thread_slot con il tid specificato
 // se non lo trova, restituisce -1
 int find_tid(pthread_t _tid){
@@ -171,6 +179,11 @@ void *handle_socket(void* _args){
 		// compongo la risposta
 		strcpy(res_ptr, "SERVER RESPONSE\n");
 		res_ptr = next_line(res_ptr);
+		// non posso processare la richiesta mentre e' in corso un estrazione
+		pthread_mutex_lock(&extr_lock);
+		if (estrazione_in_corso == 1)
+			pthread_cond_wait(&end_of_extraction, &extr_lock);
+		pthread_mutex_unlock(&extr_lock);
 		err = make_response(thread_data, command, req_ptr, res_ptr);
 
 		if (err == BANNED){
@@ -208,9 +221,13 @@ void *handle_timer(void* _args){
 
 	while(1){ //ciclo infinto
 		sleep(timer->periodo_estraz); // aspetto la prossima estrazione
+		pthread_mutex_lock(&extr_lock);
+		estrazione_in_corso = 1;
 		make_estrazione();
+		estrazione_in_corso = 0;
+		pthread_cond_broadcast(&end_of_extraction);
+		pthread_mutex_unlock(&extr_lock);
 	}
-
 	pthread_exit(NULL);
 	return NULL;
 }
@@ -230,6 +247,10 @@ int main(int argc, char *argv[]){
 	pthread_mutex_init(&thread_slots_lock, NULL);
 	thread_slots = (thread_slot**)malloc(MAX_THREADS*sizeof(thread_slot*));
 	N_threads = 0;
+
+	estrazione_in_corso = 0;
+	pthread_mutex_init(&extr_lock, NULL);
+	pthread_cond_init (&end_of_extraction, NULL);
 
 	int listener; // Socket per l'ascolto
 	listener = create_listener(porta);
@@ -275,8 +296,6 @@ int main(int argc, char *argv[]){
 			N_threads++;
 
 			pthread_mutex_unlock(&thread_slots_lock);
-
-
 		}
 	}
 }
