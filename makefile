@@ -32,11 +32,11 @@ clean:
 $(OBJDIR)/%.o: $(SRCDIR)/*/%.c
 	$(CC) $(FLAGS) -c $< -o $@
 
-
+# Build CLIENT
 $(CLIENT): $(addprefix $(OBJDIR)/,$(CLIENT_OBJFILES))
 	${CC} -o $@ $^ $(FLAGS)
 
-	
+# Build SERVER
 $(SERVER): $(addprefix $(OBJDIR)/,$(SERVER_OBJFILES))
 	${CC} -o $@ $^ $(FLAGS)
 
