@@ -68,7 +68,7 @@ int disposizioni(int N, int k){
 }
 
 // aggiorna il file consuntivo dell'user
-// sommando il vettore di guadagni riportati per tipo di combo a quello presente nel file
+// sommando il vettore di guadagni [vincite] a quello presente nel file
 // i guadagni sono salvati in centesimi (dunque interi)
 void aggiorna_consuntivo(double vincite[N_COMBO], char* user){
     long int val_file[N_COMBO]; // in centesimi
@@ -89,9 +89,10 @@ void aggiorna_consuntivo(double vincite[N_COMBO], char* user){
 // numeri_estratti -> numeri dell'estrazione
 // time_string -> stringa contenente il timestamp dell'estrazione
 void apply_estrazione(int numeri_estratti[N_RUOTE][5], const char* _time_string){
-    // per ogni user, applico le scommesse attive
+    // apro la cartella USERS_DIR
     DIR * users_dir = opendir(USERS_DIR);
     struct dirent *u_dir;
+    // per ogni cartella trovata, applico l'estrazione al relativo utente:
     while( (u_dir=readdir(users_dir)) )
     {
         if (strcmp(u_dir->d_name, ".") == 0 || strcmp(u_dir->d_name, "..") == 0)
@@ -234,16 +235,16 @@ void apply_estrazione(int numeri_estratti[N_RUOTE][5], const char* _time_string)
 }
 
 /*
-Crea un'estrazione, applica le scommesse attive degli utenti,
+Genera un'estrazione, applica le scommesse attive degli utenti,
 salva l'estrazione in ESTRAZ_FILE e aggiorna il file vincite.txt per ogni utente
 */
 
 void make_estrazione(){
 	// apro il file delle estrazioni
 	FILE *estraz_f;
-	estraz_f = fopen(ESTRAZ_FILE,"a");
+	estraz_f = fopen(ESTRAZ_FILE,"a"); // file in cui loggo le estrazioni
 
-	int numeri_estratti[N_RUOTE][5];
+	int numeri_estratti[N_RUOTE][5]; // numeri estratti
 	time_t now = time(NULL);
 	char time_string[50];
     strftime(time_string, sizeof(time_string), "%d-%m-%Y ore %H:%M:%S", localtime(&now));

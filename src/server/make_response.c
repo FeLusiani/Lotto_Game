@@ -37,17 +37,19 @@ int is_banned(struct in_addr ip){
     return is_banned_;
 }
 
+// gestisce una richiesta di login
 enum ERROR login(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     if (strcmp(thread_data->user, "") != 0) return ALREADY_LOGGED;
     if (is_banned(thread_data->ip)) return BANNED;
 
+    // legge le credenziali nella richiesta
     char user[51] = "";
     char pwd[51] = "";
     sscanf(req_ptr, "USER: %s\nPWD: %s", user, pwd);
 
     char usr_dir[MAX_PATH_LEN];
     sprintf(usr_dir, "%s/%s", USERS_DIR, user);
-    // controllo se esiste gia' una directory a nome dell'utente
+    // controllo se esiste una directory a nome dell'utente
     struct stat st = {0};
     if (stat(usr_dir, &st) == -1){
         // autenticazione fallita
@@ -60,20 +62,23 @@ enum ERROR login(thread_slot* thread_data, char* req_ptr, char* res_ptr){
             return WRONG_CREDENTIALS;
     }
 
-    // cerco il file associato all'user
+    // cerco il file pwd.txt associato all'utente
     char usr_filepath[MAX_PATH_LEN];
     sprintf(usr_filepath, "%s/pwd.txt", usr_dir);
     FILE *usr_file;
     usr_file = fopen(usr_filepath,"r");
+    // se non esiste
     if (usr_file == NULL){
         printf("Could not open file: %s\n", usr_filepath);
         printf("%s\n", strerror(errno));
         return SERVER_ERROR;
     }
+    // leggo la password contenuta in pwd.txt
     char saved_pwd[51] = "";
     fscanf(usr_file,"%s",saved_pwd);
     fclose(usr_file);
 
+    // verifico la password usata usata per il login
     if (strcmp(pwd, saved_pwd) != 0){
         // autenticazione fallita
         thread_data->n_try ++;
@@ -96,11 +101,13 @@ enum ERROR login(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     return NO_ERROR;
 }
 
+// gestisce una richiesta di signup
 enum ERROR signup(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     if (strcmp(thread_data->user, "") != 0)
         return ALREADY_LOGGED;
     char user[51] = "";
     char pwd[51] = "";
+    // leggo le credenziali nella richiesta
     sscanf(req_ptr, "USER: %s\nPWD: %s", user, pwd);
 
     char usr_dir[MAX_PATH_LEN];
@@ -165,6 +172,7 @@ enum ERROR signup(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     return NO_ERROR;
 }
 
+// gestisce l'arrivo di una giocata
 enum ERROR invia_giocata(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     if (strcmp(thread_data->user, "") == 0)
         return NOT_LOGGED_IN;
@@ -201,6 +209,7 @@ enum ERROR print_user_file(const char* _filename,const char* _user, char** res_p
     return NO_ERROR;
 }
 
+// gestisce una richiesta di "vedi_giocate"
 enum ERROR vedi_giocate(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     if (strcmp(thread_data->user, "") == 0)
         return NOT_LOGGED_IN;
@@ -218,12 +227,14 @@ enum ERROR vedi_giocate(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     return err;
 }
 
+// gestisce una richiesta di "vedi_estrazioni"
 enum ERROR vedi_estrazioni(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     if (strcmp(thread_data->user, "") == 0)
         return NOT_LOGGED_IN;
 
     int n_estr;
     enum RUOTA ruota;
+    // leggi numero di estrazioni e ruota indicata nella richiesta
     if (sscanf(req_ptr, "N_ESTRAZIONI: %d\nRUOTA: %d\n", &n_estr, (int*)&ruota) < 2)
         return BAD_REQUEST;
 
@@ -273,6 +284,7 @@ enum ERROR vedi_estrazioni(thread_slot* thread_data, char* req_ptr, char* res_pt
 
 }
 
+// gestice una richiesta di "vedi_vincite"
 enum ERROR vedi_vincite(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     if (strcmp(thread_data->user, "") == 0)
         return NOT_LOGGED_IN;
@@ -306,11 +318,13 @@ enum ERROR vedi_vincite(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     return NO_ERROR;
 }
 
+// gestisce una richiesta di "esci"
 enum ERROR esci(thread_slot* thread_data, char* req_ptr, char* res_ptr){
     sprintf(res_ptr,"Server: session end.\n");
     return NO_ERROR;
 }
 
+// gestisce una richiesta da parte del client
 enum ERROR make_response(thread_slot* thread_data, enum COMMAND command, char* msg_ptr, char*res_ptr){
     enum ERROR e_;
     switch(command){

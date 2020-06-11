@@ -22,7 +22,7 @@ void disconnection_handler(int signal){
 	not_reachable = 1;
 }
 
-
+// data la risposta del server _msg, stampa le giocate richieste
 enum ERROR display_giocate(char* _msg){
 	const char* format_giocata = "RUOTE_GIOCATE: %s\n"
 								 "NUMERI_GIOCATI:%[^\n]\n"
@@ -32,12 +32,14 @@ enum ERROR display_giocate(char* _msg){
 	int importi[N_COMBO];
 	int chars_read;
 	int giocate_counter = 1;
+
+	// ogni iterazione del loop legge una giocata da _msg e ne stampa i valori
 	while(1){
 		printf("\n");
 		int res = sscanf(_msg, format_giocata, ruote_giocate, num_giocati,
 						 &importi[0], &importi[1], &importi[2], &importi[3], &importi[4],
 						 &chars_read);
-
+		// giocata mal formattata o fine di _msg
 		if (res < 7) break;
 
 		_msg = &_msg[chars_read]; // avanzo il puntatore per parsare le giocate
@@ -113,13 +115,15 @@ int main (int argc, char *argv[]) {
 		return 0;
 	}
 
-	show_help(NO_COMMAND);
+	show_help(NO_COMMAND); //stampa info di help
+
+	// MAIN LOOP
 	while(command != ESCI && err != BANNED && err != DISCONNECTED && not_reachable == 0){
 		// mostra eventuale errore da ciclo precedente
 		if (err != NO_ERROR)
 			show_error(err);
 		err = NO_ERROR;
-		// preparazione messaggio
+		// pulitura del buffer, scrittura dell'header
 		strcpy(msg_buf, "");
 		sprintf(&msg_buf[strlen(msg_buf)], "CLIENT REQUEST\nSESSION_ID: %s\n", session_id);
 
@@ -149,13 +153,14 @@ int main (int argc, char *argv[]) {
 		// estraggo il comando come prima sottostringa
 		char* str = input;
 		command = str2command(str);
-		str = &str[strlen(input) + 1];
+		str = &str[strlen(input) + 1]; // avanzo il puntatore str
+		// scrivo il comando
 		sprintf(&msg_buf[strlen(msg_buf)], "COMMAND: %d\n", (int)command);
-
+		// finisco di scrivere la richiesta
 		err = make_request(command, str, msg_buf);
 
 		if (command == HELP) continue; // help non necessita di inviare alcuna richiesta
-		if(err != NO_ERROR) continue; //se errore, riprova a leggere l'input
+		if(err != NO_ERROR) continue; // se errore, riprova a leggere l'input
 		// invio la richiesta
 		err = send_msg(sid, msg_buf);
 		if(err != NO_ERROR) continue; //riprova a leggere l'input

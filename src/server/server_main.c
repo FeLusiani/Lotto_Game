@@ -51,7 +51,7 @@ int find_tid(pthread_t _tid){
 	return -1;
 }
 
-// la funzione che crea il socket che accetta le connessioni dai client
+// crea il socket che accetta le connessioni dai client
 int create_listener(int _port){
 	int listener_;
 	struct sockaddr_in server_addr; // Indirizzo server
@@ -76,7 +76,7 @@ int create_listener(int _port){
 	return listener_;
 }
 
-// funzione che legge i parametri di ingresso
+// legge porta e periodo indicati nel comando di avvio
 // restituisce 1 in caso di errore, 0 altrimenti
 int readInput(int _argc, char *_argv[], int *porta_, int *periodo_){
 	if(_argc == 1){
@@ -128,16 +128,18 @@ void free_thread_slot(int _index){
 	N_threads --;
 	if (N_threads == _i)
 		return; // ho eliminato l'ultimo slot dell'array
-	// in caso contrario, devo compattare
+	// in caso contrario, devo compattare l'array
 	thread_slots[_i] = thread_slots[N_threads];
 	thread_slots[_i]->index = _i;
 }
 
+// codice eseguito da ogni thread che serve una connessione utente
 void *handle_socket(void* _args){
 	thread_slot* thread_data = (thread_slot*)_args;
 	enum ERROR err = NO_ERROR;
 	enum COMMAND command = NO_COMMAND;
 
+	// loop eseguito dal thread
 	while(!thread_data->exit && err != BANNED && command!=ESCI){
 		char* req_ptr = thread_data->req_buf; // buffer for request message
 		char* res_ptr = thread_data->res_buf; // buffer for response message
@@ -150,7 +152,7 @@ void *handle_socket(void* _args){
 		err = NO_ERROR;
 
 		err = get_msg(thread_data->sid, req_ptr);
-		if (thread_data->exit == 1) err = DISCONNECTED;
+		if (thread_data->exit == 1) err = DISCONNECTED; // ha ricevuto SIG_PIPE
 		if (err != NO_ERROR) break;
 
 		printf("Thread %d received:\n", thread_data->index);
@@ -190,11 +192,10 @@ void *handle_socket(void* _args){
 			send_error(thread_data->sid, err);
 			printf("Tentativo di accesso da ip bannato %s\n", inet_ntoa(thread_data->ip));
 			err = NO_ERROR;
-			break;
+			break;  //disconnetti
 		}
 
 		if (err == DISCONNECTED) break;
-
 
 		// rispondo al client
 		if(err != NO_ERROR)
@@ -202,12 +203,13 @@ void *handle_socket(void* _args){
 		else
 			err = send_msg(thread_data->sid, thread_data->res_buf);
 	}
-
+	//terminazione del thread
+	//stampa eventuale errore
 	if (err!=NO_ERROR){
 		printf("Thread %d: ",thread_data->index);
 		show_error(err);
 	}
-
+	//rilascia risorse
 	pthread_mutex_lock(&thread_slots_lock);
 	free_thread_slot(thread_data->index);
 	pthread_mutex_unlock(&thread_slots_lock);
@@ -215,7 +217,7 @@ void *handle_socket(void* _args){
 	return NULL;
 }
 
-
+// codice eseguito dal thread che esegue le estrazioni
 void *handle_timer(void* _args){
 	timer_data* timer = (timer_data*)_args;
 
@@ -266,6 +268,7 @@ int main(int argc, char *argv[]){
 	timer.periodo_estraz = periodo;
 	pthread_create(&timer.tid, NULL, handle_timer, &timer); // avvio il timer
 
+	// ciclo infinito
 	while(1){
 		if(N_threads < MAX_THREADS){
 			struct sockaddr_in cl_addr; // Indirizzo client

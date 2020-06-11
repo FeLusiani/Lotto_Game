@@ -27,7 +27,7 @@ enum ERROR send_error(int _sid, enum ERROR e){
 	return send_msg(_sid, buffer);
 }
 
-// riceve un messaggio testuale da _sid e le scrive in msg_
+// riceve un messaggio testuale dal socket _sid e lo scrive in msg_
 enum ERROR get_msg(int _sid, char* msg_){
 	ssize_t res;
 	uint16_t buf_size;
