@@ -1,3 +1,4 @@
-# Reti_Informatiche_Prog
+# Networking Project
 
-Questo è il progetto realizzato per l'esame di **Reti Informatiche**, tenuto dal prof. [Giuseppe Anastasi](http://info.iet.unipi.it/~anastasi/).
+The project realizes a server and client application for a simple Lotto game.
+It was made as an assignment for the **Course in Networking** @ University of Pisa.
